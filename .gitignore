@@ -1,5 +1,6 @@
 bin/
-statik/
 vendor/
 identifiers.json
 .gopath~
+client/dist
+client/node_modules

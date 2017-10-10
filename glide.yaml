@@ -1,0 +1,8 @@
+package: archiscribe
+import:
+- package: github.com/bitly/go-simplejson
+  version: ^0.5.0
+- package: github.com/julienschmidt/httprouter
+  version: ^1.1.0
+- package: gopkg.in/cheggaaa/pb.v2
+  version: ^2.0.4
