@@ -1,0 +1,5 @@
+bin/
+statik/
+vendor/
+identifiers.json
+.gopath~
