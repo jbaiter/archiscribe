@@ -3,12 +3,11 @@
     <div v-if="loading" class="control is-loading">
       <input disabled placeholder="Bild wird geladen..." class="input" />
     </div>
-    <img v-if="loaded" :src="imageSrc" :class="classes" :title="label" />
+    <img :src="imageSrc" :class="classes" :title="label"
+         @load="onLoaded" @error="onError"
+         :style="{'display': loaded ? 'block': 'none'}" />
     <div v-if="error" class="box is-error">
       Fehler beim Laden des Zeilenbildes
-      <button class="button" title="Nochmals versuchen" @click="loadImage">
-        <b-icon icon="refresh" />
-      </button>
     </div>
   </div>
 </template>
@@ -22,41 +21,49 @@ export default {
       'loading': false,
       'loaded': false,
       'error': false
-    };
+    }
+  },
+  watch: {
+    imageSrc (oldVal, newVal) {
+      if (oldVal !== newVal && newVal) {
+        this.onLoadStart()
+      }
+    }
+  },
+  created () {
+    if (this.imageSrc) {
+      this.onLoadStart()
+    }
   },
   methods: {
     onClick () {
-      this.$emit('click');
+      this.$emit('click')
     },
-    loadImage () {
-      let img = new Image();
-      img.src = this.imageSrc;
-      let vm = this;
-      vm.loading = true;
-      img.onload = () => {
-        vm.error = false;
-        vm.loading = false;
-        vm.loaded = true;
-      };
-      img.onerror = () => {
-        vm.loading = false;
-        vm.error = true;
-      };
+    onLoadStart () {
+      this.error = false
+      this.loaded = false
+      this.loading = true
+    },
+    onLoaded () {
+      this.error = false
+      this.loading = false
+      this.loaded = true
+    },
+    onError () {
+      this.loading = false
+      this.error = true
     }
   },
   computed: {
     classes () {
       if (this.type === 'focus') {
-        return {'focus-line': true};
+        return {'focus-line': true}
       } else {
         let cls = {'context-line': true}
-        cls[this.type] = true;
-        return cls;
+        cls[this.type] = true
+        return cls
       }
-    },
-  },
-  created () {
-    this.loadImage();
+    }
   }
 }
 </script>

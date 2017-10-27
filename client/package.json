@@ -14,7 +14,8 @@
     "axios": "^0.16.2",
     "buefy": "^0.5.3",
     "mousetrap": "^1.6.1",
-    "vue": "^2.4.2"
+    "vue": "^2.4.2",
+    "vuex": "^2.5.0"
   },
   "devDependencies": {
     "autoprefixer": "^7.1.2",

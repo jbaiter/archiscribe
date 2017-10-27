@@ -1,5 +1,5 @@
 hash: 6824f78798d53c90bc0af9506334e6c6e124208b33233f3ae393e0c1ef52577f
-updated: 2017-10-09T21:40:49.334480315+02:00
+updated: 2017-10-25T23:25:59.84142193+02:00
 imports:
 - name: github.com/bitly/go-simplejson
   version: aabad6e819789e569bd6aabf444c935aa9ba1e44
@@ -11,13 +11,17 @@ imports:
 - name: github.com/mattn/go-isatty
   version: 57fdcb988a5c543893cc61bce354a6e24ab70022
   repo: https://github.com/mattn/go-isatty
+- name: github.com/mattn/go-runewidth
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+- name: github.com/olekukonko/tablewriter
+  version: a7a4c189eb47ed33ce7b35f2880070a0c82a67d4
 - name: golang.org/x/sys
   version: e24f485414aeafb646f6fca458b0bf869c0880a1
   repo: https://go.googlesource.com/sys
   subpackages:
   - unix
 - name: gopkg.in/cheggaaa/pb.v2
-  version: 4a1bf7a97d1348c5b50aabf6e1eb0496ca0a3d33
+  version: fec330ed6ef74d0a026da2c639821ee0d9f97687
   subpackages:
   - termutil
 - name: gopkg.in/fatih/color.v1

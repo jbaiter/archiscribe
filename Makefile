@@ -18,16 +18,18 @@ Q = $(if $(filter 1,$V),,@)
 M = $(shell printf "\033[34;1m▶\033[0m")
 
 .PHONY: all
-all: fmt lint vendor client/dist packr | $(BASE) ; $(info $(M) building executable…) @ ## Build program binary
+all: bin/$(PACKAGE) vendor client/dist packr | $(BASE)
+
+$(BASE): ; $(info $(M) setting GOPATH…)
+	@mkdir -p $(dir $@)
+	@ln -sf $(CURDIR) $@
+
+bin/$(PACKAGE): fmt lint packr ; $(info $(M) building executable…) @ ## Build program binary
 	$Q cd $(BASE) && $(GO) build \
 		-tags release \
 		-ldflags '-X $(PACKAGE)/cmd.Version=$(VERSION) -X $(PACKAGE)/cmd.BuildDate=$(DATE)' \
 		-o bin/$(PACKAGE) main.go
 	$Q $(PACKR) clean
-
-$(BASE): ; $(info $(M) setting GOPATH…)
-	@mkdir -p $(dir $@)
-	@ln -sf $(CURDIR) $@
 
 # Tools
 

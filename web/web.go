@@ -16,8 +16,34 @@ import (
 	"archiscribe/lib"
 )
 
+var taskChan = make(chan lib.TaskDefinition)
+
 // SubmitTranscription handles user-submitted transcriptions
 func SubmitTranscription(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var task lib.TaskDefinition
+	err := json.NewDecoder(r.Body).Decode(&task)
+	task.ResultChan = make(chan lib.SubmitResult)
+	defer close(task.ResultChan)
+	log.Printf("Received %d transcriptions for %s", len(task.Lines), task.Identifier)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("%+v", err)))
+	} else {
+		log.Printf("Writing task to taskChan")
+		taskChan <- task
+		log.Printf("Waiting for commit")
+		log.Printf("ResultChan has length %d", len(task.ResultChan))
+		result := <-task.ResultChan
+		log.Printf("Got result!")
+		js, _ := json.Marshal(result)
+		if result.Error != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+		w.Write(js)
+		w.Header().Add("Content-Type", "application/json")
+	}
 }
 
 // ProduceLines begins generating OCR lines for a given identifier
@@ -131,7 +157,7 @@ func addPrefix(prefix string, h http.Handler) http.Handler {
 }
 
 // Serve the web application
-func Serve() {
+func Serve(port int) {
 	box := packr.NewBox("../client/dist")
 
 	router := httprouter.New()
@@ -139,11 +165,11 @@ func Serve() {
 		w.Write(box.Bytes("index.html"))
 	})
 	router.GET("/api/lines/:year", ProduceLines)
+	router.POST("/api/transcriptions", SubmitTranscription)
 	router.NotFound = http.FileServer(box).ServeHTTP
-	//router.NotFound = http.HandlerFunc(http.FileServer(box))
-	//router.ServeFiles("/static/*filepath", box)
-	//router.POST("/api/transcriptions", submittranscription)
 
-	fmt.Println("Serving on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	go lib.GitWatcher("/tmp/temp-corpus", taskChan)
+
+	fmt.Printf("Serving on port %d\n", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }

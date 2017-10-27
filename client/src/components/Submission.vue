@@ -1,38 +1,38 @@
 <template>
-  <div>
+  <div class="column is-half is-offset-one-quarter">
     <div class="box">
       <p>
       Sie haben <strong>{{ numTranscriptions }}</strong> von
       <strong>{{ lines.length }}</strong> Zeilen transkribiert.
       </p>
     </div>
-    <form v-if="githubUrl" @submit="onContinue">
+    <form v-if="githubUrl" @submit.prevent="resetWorkflow">
       <p>
       Ihre Änderungen wurden erfolgreich eingecheckt:
-      <a :href="githubUrl">{{githubUrl}}</a>
+      <a :href="githubUrl">{{ githubUrl }}</a>
       </p>
       <button class="button" type="submit">
         Weiter transkribieren
       </button>
     </form>
     <form v-if="numTranscriptions > 0 && !githubUrl"
-          class='submission' @submit="onSubmit">
+          class='submission' @submit.prevent="submit">
       <b-field>
         <b-switch v-model="anonymous">Anonym</b-switch>
       </b-field>
       <b-field grouped v-if="!anonymous">
         <b-field label="Name" expanded>
-          <b-input v-model='name' />
+          <b-input :value='author' @input="updateAuthor" />
         </b-field>
         <b-field label="Email" expanded>
-          <b-input type="email" v-model="email" />
+          <b-input type="email" :value='email' @input="updateEmail" />
         </b-field>
       </b-field>
       <b-field label="Kommentar">
-        <b-input v-model="comment" maxlength="8192" type="textarea" />
+        <b-input :value="comment" @input="updateComment" type="textarea" />
       </b-field>
       <button type="submit"
-              :class="{ 'button': true, 'is-success': true, 'is-loading': isPending }">
+              :class="{ 'button': true, 'is-success': true, 'is-loading': isSubmitting }">
         Abschicken
       </button>
     </form>
@@ -40,51 +40,40 @@
 </template>
 
 <script>
-import bus from '../eventBus'
+import { mapActions, mapMutations, mapState } from 'vuex'
 
 export default {
   name: 'Submission',
-  props: ['lines'],
   data () {
-    let state = {
-      comment: null,
-      isPending: false,
-      githubUrl: null,
-    };
-    let identity = JSON.parse(localStorage.getItem('identity'));
-    if (identity) {
-      state = {...state, ...identity};
-    } else {
-      state['name'] = null;
-      state['email'] = null;
-      state['anonymous'] = false;
-    }
-    return state;
-  },
-  methods: {
-    onSubmit (e) {
-      e.preventDefault();
-      this.$emit('submit', this.email, this.name, this.comment);
-    },
-    onContinue (e) {
-      e.preventDefault();
-      this.$emit('continue');
+    return {
+      anonymous: false
     }
   },
   computed: {
+    githubUrl () {
+      if (this.commit) {
+        return `https://github.com/jbaiter/archiscribe-corpus/commit/${this.commit}`
+      } else {
+        return null
+      }
+    },
     numTranscriptions () {
-      let num = 0;
-      this.lines.forEach((l) => l.transcription ? num += 1 : null);
-      return num;
-    }
+      let num = 0
+      for (let l of this.lines) {
+        if (l.transcription) {
+          num += 1
+        }
+      }
+      return num
+    },
+    ...mapState(['lines', 'author', 'email', 'comment', 'commit', 'isSubmitting'])
   },
-  created () {
-    let vm = this;
-    bus.$on('submission-pending', () => vm.isPending = true);
-    bus.$on('submission-success', (githubUrl) => {
-      vm.githubUrl = githubUrl;
-      vm.isPending = false;
-    });
+  methods: {
+    log (val) {
+      console.log(val)
+    },
+    ...mapActions(['submit', 'resetWorkflow']),
+    ...mapMutations(['resetWorkflow', 'updateAuthor', 'updateEmail', 'updateComment'])
   }
 }
 </script>

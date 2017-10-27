@@ -1,5 +1,6 @@
 <template>
-  <form class="transcription-widget" @submit="onNext">
+<div class="column">
+  <form class="transcription-widget" @submit.prevent="onNext">
     <a class="toggle-ctx previous" v-if="line.previous && !showPrevious"
         title="Mehr Kontext" @click="togglePrevious">
         <b-icon icon="more_horiz" />
@@ -15,37 +16,40 @@
     </a>
     <b-field>
       <div class="control is-clearfix is-expanded">
-        <input ref="transcription" class="input mousetrap" v-model="transcription" />
+        <input ref="transcription" class="input mousetrap"
+               :value="line.transcription" @input="updateTranscription($event.target.value)" />
       </div>
-      <a :class="prevClasses" @click="onPrevious" title="Vorherige Zeile korrigieren">
+      <a class="button undo-btn" @click="previousLine" title="Vorherige Zeile korrigieren"
+         :disabled="!hasPrevious">
         <b-icon icon="undo" />
       </a>
-      <button class="button is-success done-btn" @click="onNext"
-              title="Nächste Zeile" type="submit">
+      <button class="button is-success done-btn" title="Nächste Zeile" type="submit">
         <b-icon icon="done" />
       </button>
-      <a class="button is-danger delete-btn" @click="onMarkGarbage"
+      <a class="button is-danger delete-btn" @click="discardLine(currentLineIdx)"
           title="Zeile verwerfen">
         <b-icon icon="delete" />
       </a>
     </b-field>
   </form>
+</div>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 import bus from '../eventBus'
+
 import LineImage from './LineImage'
 
 export default {
   name: 'LineEditor',
-  props: ['line', 'hasPrevious'],
-  components: {LineImage},
+  components: { LineImage },
   data () {
     return {
-      transcription: this.line.transcription,
       showPrevious: false,
       showNext: false
-    };
+    }
   },
   computed: {
     prevClasses () {
@@ -53,42 +57,64 @@ export default {
         'button': true,
         'undo-btn': true,
         'disabled': !this.hasPrevious
-      };
-    }
-  },
-  methods: {
-    onNext (e) {
-      e.preventDefault();
-      this.$emit('transcription-done', this.transcription);
-    },
-    onPrevious () {
-      if (this.hasPrevious) {
-        this.$emit('previous-line');
       }
     },
-    onMarkGarbage () {
-      this.$emit('delete-line');
+    ...mapState({
+      currentLineIdx: 'currentLineIdx',
+      hasNext: state => state.currentLineIdx < (state.lines.length - 1),
+      hasPrevious: state => state.currentLineIdx > 0,
+      line: state => state.lines[state.currentLineIdx]
+    })
+  },
+  methods: {
+    resetContext () {
+      this.showPrevious = false
+      this.showNext = false
+    },
+    onNext (e) {
+      this.nextLine()
+      this.resetContext()
     },
     togglePrevious () {
-      this.showPrevious = !this.showPrevious;
+      this.showPrevious = !this.showPrevious
     },
     toggleNext () {
-      this.showNext = !this.showNext;
+      this.showNext = !this.showNext
+    },
+    updateTranscription (val) {
+      this.$store.commit('updateTranscription', {
+        lineIdx: this.$store.state.currentLineIdx,
+        transcription: val
+      })
+    },
+    nextLine () {
+      this.$store.commit('nextLine')
+      this.resetContext()
+    },
+    discardLine () {
+      this.$store.commit('discardLine')
+      this.resetContext()
+    },
+    previousLine () {
+      this.$store.commit('previousLine')
+      this.resetContext()
     }
   },
   created () {
-    var vm = this;
-    bus.$on('insert-grapheme', function(grapheme) {
-      if (vm.$refs.transcription) {
-        let ref = vm.$refs.transcription;
-        vm.transcription = vm.transcription.substring(0, ref.selectionStart) +
-                          grapheme + vm.transcription.substring(ref.selectionEnd);
-        ref.focus();
+    const vm = this
+    bus.$on('insert-grapheme', (grapheme) => {
+      if (!vm.$refs.transcription) {
+        return
       }
-    });
+      vm.$store.commit('insertGrapheme', {
+        grapheme,
+        start: vm.$refs.transcription.selectionStart,
+        end: vm.$refs.transcription.selectionEnd })
+      vm.$refs.transcription.focus()
+    })
   },
   mounted () {
-    this.$refs.transcription.focus();
+    this.$refs.transcription.focus()
   }
 }
 </script>
@@ -98,15 +124,15 @@ a.toggle-ctx {
   display: block;
   width: 100%;
   text-align: center;
-  color: #000000;
+  color: lightgray;
 }
 
 .toggle-ctx.previous {
-  margin-bottom: 0.1em;
+  margin-bottom: 0.25em;
 }
 
 .toggle-ctx.next {
-  margin-top: 0.1em;
+  margin-top: 0.25emm;
 }
 
 button.done-btn {

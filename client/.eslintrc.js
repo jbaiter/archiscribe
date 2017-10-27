@@ -10,13 +10,12 @@ module.exports = {
   },
   // https://github.com/standard/standard/blob/master/docs/RULES-en.md
   extends: [
-    'standard',
-    'plugin:vue/recommended'
+    'standard'
   ],
 
   // required to lint *.vue files
   plugins: [
-    'html'
+    'html',
   ],
   // add your custom rules here
   'rules': {

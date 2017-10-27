@@ -8,7 +8,7 @@
       <a class="button" @click="showMulti" title="Zeilenübersicht">
         <b-icon icon="format_align_left" />
       </a>
-      <a :class="btnClasses" @click="pickAnother" title="Anderes Buch auswählen">
+      <a class="button" @click="pickAnother" title="Anderes Buch auswählen">
         <b-icon icon="autorenew" />
       </a>
       <a class="button is-success" @click="submit" title="Transkriptionen abschicken">
@@ -19,32 +19,29 @@
 </template>
 
 <script>
-import bus from '../eventBus'
+import { mapActions, mapMutations, mapState } from 'vuex'
 
 export default {
-  name: 'VolumeInfo',
-  props: ['metadata', 'isLoading'],
+  name: 'Toolbar',
   computed: {
-    btnClasses () {
-      return {
-        'button': true,
-        'is-loading': this.isLoading,
-      };
-    }
+    ...mapState(['metadata'])
   },
   methods: {
     pickAnother () {
-      this.$emit('pick-another');
+      this.fetchLines()
+      this.changeScreen('config')
     },
     showSingle () {
-      bus.$emit('change-screen', 'single');
+      this.changeScreen('single')
     },
     showMulti () {
-      bus.$emit('change-screen', 'multi');
+      this.changeScreen('multi')
     },
     submit () {
-      bus.$emit('change-screen', 'submit');
-    }
+      this.changeScreen('submit')
+    },
+    ...mapMutations(['changeScreen']),
+    ...mapActions(['fetchLines'])
   }
 }
 </script>
