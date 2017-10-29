@@ -10,7 +10,20 @@
       <component v-bind:is='currentScreen' />
     </section>
     <footer ref="footer" class="footer" v-if="showFooter">
-      <keyboard />
+      <div class="help-toggle">
+        <label class="switch">
+          <span class="switch-left">
+            <b-icon icon="keyboard" :type="showHelp ? 'is-black' : 'is-primary'"/>
+          </span>
+          <input type="checkbox" v-model="showHelp" />
+          <span class="check" />
+          <span class="switch-right">
+            <b-icon icon="help" :type="showHelp ? 'is-primary' : 'is-black'"/>
+          </span>
+        </label>
+      </div>
+      <fraktur-help v-if="showHelp" />
+      <keyboard v-else />
     </footer>
   </div>
 </template>
@@ -23,6 +36,7 @@ import bus from './eventBus'
 import Setup from './components/Setup'
 import Toolbar from './components/Toolbar'
 import Keyboard from './components/Keyboard'
+import FrakturHelp from './components/FrakturHelp'
 import ProgressBar from './components/ProgressBar'
 import LineEditor from './components/LineEditor'
 import MultiLineEditor from './components/MultiLineEditor'
@@ -33,6 +47,7 @@ export default {
   components: {
     Toolbar,
     Keyboard,
+    FrakturHelp,
     ProgressBar,
     'single': LineEditor,
     'multi': MultiLineEditor,
@@ -41,6 +56,7 @@ export default {
   },
   data () {
     return {
+      showHelp: false,
       marginBottom: null
     }
   },
@@ -150,5 +166,18 @@ body {
   bottom: 0px;
   padding: 1.5vh 0;
   max-width: 1344px;
+}
+
+.help-toggle {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+.switch-left {
+  padding-right: 0.5em;
+}
+
+.switch-right {
+  padding-left: 0.5em;
 }
 </style>
