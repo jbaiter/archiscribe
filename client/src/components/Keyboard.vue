@@ -45,6 +45,7 @@ let SPECIAL_CHARACTERS = {
   '«': '<',
   '„': '"',
   '”': "'",
+  '’': null,
   '£': null,
   '§': null,
   '†': '+'
