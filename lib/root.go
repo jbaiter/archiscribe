@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,6 +13,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"text/template"
 
 	"github.com/bitly/go-simplejson"
 	"github.com/olekukonko/tablewriter"
@@ -31,20 +31,20 @@ This is the corpus repository for https://archiscribe.jbaiter.de.
 The goal is to have as much diverse OCR ground truth for 19th Century German
 prints as possible.
 
-Currently the corpus contains {.numLines} lines from {numWorks} works
-published across {.numYears} years. Detailed statistics are available below.
+Currently the corpus contains {{.numLines}} lines from {{.numWorks}} works
+published across {{.numYears}} years. Detailed statistics are available below.
 
 ## Statistics: Decades
 
-{.decadeTable}
+{{.decadeTable}}
 
 ## Statistics: Years
 
-{.yearTable}
+{{.yearTable}}
 
 ## Statistics: Works
 
-{.worksTable}
+{{.worksTable}}
 `
 
 // IDCache is a global cache for suitable identifiers
@@ -194,12 +194,8 @@ func cacheWatcher(basePath string) (map[int]chan string, error) {
 	*/
 }
 
-func saveLine(lineURL string, baseDir string, transcription string) error {
-	return nil
-}
-
 func createReadme(repoPath string) string {
-	metaFiles, _ := filepath.Glob(fmt.Sprintf("%s/*/*.json", repoPath))
+	metaFiles, _ := filepath.Glob(fmt.Sprintf("%s/transcriptions/*/*.json", repoPath))
 	// TODO: Handle error
 	sort.Strings(metaFiles)
 	numLinesTotal := 0
@@ -217,7 +213,7 @@ func createReadme(repoPath string) string {
 			log.Printf("Could not parse meta file %s: %+v", metaPath, err)
 			continue
 		}
-		numLines := len(meta.Get("lines").MustArray())
+		numLines := len(meta.Get("lines").MustMap())
 		numLinesTotal += numLines
 		year, _ := strconv.Atoi(meta.Get("year").MustString())
 		decade := (year / 10) * 10
@@ -231,50 +227,58 @@ func createReadme(repoPath string) string {
 		miradorLink := fmt.Sprintf(
 			"[Mirador](ttps://iiif.archivelab.org/iiif/%s)", ident)
 		metaRows = append(metaRows, []string{
-			meta.Get("title").MustString(), meta.Get("title").MustString(),
+			meta.Get("title").MustString(), meta.Get("date").MustString(),
 			archiveLink, fmt.Sprintf("%s/%s", manifestLink, miradorLink)})
 	}
 
 	var yearsTable bytes.Buffer
+	var years []int
+	for k := range yearCount {
+		years = append(years, k)
+	}
+	sort.Ints(years)
 	t := tablewriter.NewWriter(&yearsTable)
+	t.SetAutoFormatHeaders(false)
 	t.SetHeader([]string{"Year", "# lines"})
 	t.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	t.SetCenterSeparator("|")
-	for year, cnt := range yearCount {
-		t.Append([]string{strconv.Itoa(year), strconv.Itoa(cnt)})
+	for _, year := range years {
+		t.Append([]string{strconv.Itoa(year), strconv.Itoa(yearCount[year])})
 	}
 	t.Render()
 
 	var decadesTable bytes.Buffer
+	var decades []int
+	for k := range decadeCount {
+		decades = append(decades, k)
+	}
+	sort.Ints(decades)
 	t = tablewriter.NewWriter(&decadesTable)
+	t.SetAutoFormatHeaders(false)
 	t.SetHeader([]string{"Decade", "# lines"})
 	t.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	t.SetCenterSeparator("|")
-	for decade, cnt := range decadeCount {
-		t.Append([]string{strconv.Itoa(decade), strconv.Itoa(cnt)})
+	for _, decade := range decades {
+		t.Append([]string{strconv.Itoa(decade), strconv.Itoa(decadeCount[decade])})
 	}
 	t.Render()
 
 	var metaTable bytes.Buffer
 	t = tablewriter.NewWriter(&metaTable)
+	t.SetAutoFormatHeaders(false)
+	t.SetAutoWrapText(false)
 	t.SetHeader([]string{"Title", "Date", "Archive.org", "IIIF"})
 	t.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	t.SetCenterSeparator("|")
 	t.AppendBulk(metaRows)
 	t.Render()
 
-	// TODO: List transcribed lines
-	// TODO: Extract metadata for each transcribed volume
-	// TODO: Count number of lines per year
-	// TODO: Count number of lines per decade
-	// TODO: Assemble MetadataSummary structs
-	// TODO: Use olekukonko/tablewriter to create markdown tables from
-	//       the above data
 	var out bytes.Buffer
 	tmpl := template.Must(template.New("README.md").Parse(readmeTemplate))
-	tmpl.Execute(&out, map[string]interface{}{
-		"numLines":    numLinesTotal,
-		"numWorks":    len(metaFiles),
+	tmpl.Execute(&out, map[string]string{
+		"numLines":    strconv.Itoa(numLinesTotal),
+		"numWorks":    strconv.Itoa(len(metaFiles)),
+		"numYears":    strconv.Itoa(len(years)),
 		"decadeTable": decadesTable.String(),
 		"yearTable":   yearsTable.String(),
 		"worksTable":  metaTable.String(),

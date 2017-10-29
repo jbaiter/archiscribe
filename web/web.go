@@ -29,20 +29,16 @@ func SubmitTranscription(w http.ResponseWriter, r *http.Request, _ httprouter.Pa
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(fmt.Sprintf("%+v", err)))
 	} else {
-		log.Printf("Writing task to taskChan")
 		taskChan <- task
-		log.Printf("Waiting for commit")
-		log.Printf("ResultChan has length %d", len(task.ResultChan))
 		result := <-task.ResultChan
-		log.Printf("Got result!")
 		js, _ := json.Marshal(result)
+		w.Header().Add("Content-Type", "application/json")
 		if result.Error != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
 		w.Write(js)
-		w.Header().Add("Content-Type", "application/json")
 	}
 }
 

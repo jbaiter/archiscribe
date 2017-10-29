@@ -32,7 +32,6 @@ func GitOpen(path string) (*GitRepo, error) {
 	}
 	cmd := exec.Command(gitPath)
 	cmd.Dir = path
-	log.Printf("Opened repository in %s", cmd.Dir)
 	return &GitRepo{
 		cmd: cmd,
 	}, nil
@@ -117,6 +116,7 @@ func (r *GitRepo) Push(remote string, branch string) error {
 
 // CleanUp residual modifications
 func (r *GitRepo) CleanUp() error {
+	defer r.resetCmd()
 	r.cmd.Args = append(r.cmd.Args, "reset")
 	if stdout, stderr, err := r.run(); err != nil {
 		return fmt.Errorf("%q\n%q", stdout, stderr)
@@ -141,7 +141,6 @@ func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitR
 
 	// Write line image
 	imgPath := filepath.Join(basePath, baseName+".png")
-	log.Printf("Writing image file to %s", imgPath)
 	imgOut, err := os.Create(imgPath)
 	if err != nil {
 		return "", "", err
@@ -161,7 +160,6 @@ func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitR
 
 	// Write transcription
 	transPath := filepath.Join(basePath, baseName+".txt")
-	log.Printf("Writing transcription file to %s", transPath)
 	transOut, err := os.Create(transPath)
 	if err != nil {
 		return "", "", err
@@ -187,7 +185,11 @@ outer:
 		if !more {
 			return
 		}
-		log.Printf("Got task, doing commit")
+		log.Printf("Committing transcriptions...")
+		if err := repo.CleanUp(); err != nil {
+			task.ResultChan <- SubmitResult{Error: err}
+			continue
+		}
 		if err := repo.Pull("origin", "master", true); err != nil {
 			task.ResultChan <- SubmitResult{Error: err}
 			continue
@@ -215,8 +217,17 @@ outer:
 			task.ResultChan <- SubmitResult{Error: err}
 			continue
 		}
+		readme := createReadme(repoPath)
+		readmePath := filepath.Join(repoPath, "README.md")
+		readmeOut, _ := os.Create(readmePath)
+		readmeOut.WriteString(readme)
+		readmeOut.Close()
+		if err := repo.Add(readmePath); err != nil {
+			task.ResultChan <- SubmitResult{Error: err}
+			continue
+		}
 		commitMessage := fmt.Sprintf(
-			"Subscribed %d lines from %s (%s)", len(task.Lines), task.Identifier,
+			"Transcribed %d lines from %s (%s)", len(task.Lines), task.Identifier,
 			task.Metadata.Get("year").MustString())
 		if task.Comment != "" {
 			commitMessage += ("\n" + task.Comment)
@@ -225,11 +236,9 @@ outer:
 			task.ResultChan <- SubmitResult{Error: err}
 			continue
 		} else {
-			log.Println("Successfully commited task!")
 			res := SubmitResult{CommitSha: commitHash}
-			log.Printf("Passing into %+v: %+v", task.ResultChan, res)
 			task.ResultChan <- res
 		}
-		// TODO: Push
+		repo.Push("origin", "master")
 	}
 }
