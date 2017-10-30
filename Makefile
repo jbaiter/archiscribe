@@ -18,7 +18,7 @@ Q = $(if $(filter 1,$V),,@)
 M = $(shell printf "\033[34;1m▶\033[0m")
 
 .PHONY: all
-all: bin/$(PACKAGE) vendor client/dist packr | $(BASE)
+all: vendor client/dist packr bin/$(PACKAGE) | $(BASE)
 
 $(BASE): ; $(info $(M) setting GOPATH…)
 	@mkdir -p $(dir $@)
