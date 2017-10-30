@@ -1,14 +1,15 @@
 <template>
 <div class="fraktur-helper">
-  <div class="fraktur-letter" v-for="ltr in letters">
-    <img :src="`../../static/letters/${ltr.toLowerCase()}.svg`" :title="ltr" :alt="ltr" />
-  </div>
+  <FrakturLetter v-for="letter in letters" :letter="letter" :key="letter" />
 </div>
 </template>
 
 <script>
+import FrakturLetter from './FrakturLetter'
+
 export default {
   name: 'FrakturHelp',
+  components: { FrakturLetter },
   data () {
     return {
       letters: [
@@ -23,19 +24,5 @@ export default {
 <style scoped>
 .fraktur-helper {
   text-align: center;
-}
-
-.fraktur-letter {
-  display:inline-block;
-  margin: 0.5em 1.25em;
-  background: none;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.fraktur-letter img {
-  height:40px;
-  color: #000;
-  filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.5));
 }
 </style>
