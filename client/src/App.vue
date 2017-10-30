@@ -75,6 +75,9 @@ export default {
   watch: {
     showFooter (val) {
       this.$nextTick(this.adjustPaddingBottom)
+    },
+    showHelp (val) {
+      this.$nextTick(this.adjustPaddingBottom)
     }
   },
   methods: {
