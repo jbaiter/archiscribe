@@ -96,6 +96,8 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 				progChan = nil
 				break
 			}
+			// Downloading is only 75% of the overall progress
+			progMsg.Progress = 0.75 * progMsg.Progress
 			progJSON, _ := json.Marshal(progMsg)
 			fmt.Fprintf(resp, "event: progress\n")
 			fmt.Fprintf(resp, "data: %s\n\n", progJSON)
@@ -106,6 +108,9 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 				break
 			}
 			taskSize, _ := strconv.Atoi(req.URL.Query().Get("taskSize"))
+			log.Printf(
+				"Got lines for %s, picking %d at random and caching them.",
+				ident, taskSize)
 			if taskSize == 0 {
 				taskSize = 50
 			}
@@ -118,6 +123,17 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 				}
 				lineIdxes = append(lineIdxes, pickIdx)
 				lineIdxesMap[pickIdx] = true
+				lib.LineCache.CacheLine(
+					allLines[pickIdx].ImageURL,
+					lib.MakeLineIdentifier(ident, allLines[pickIdx]))
+				progMsg := lib.ProgressMessage{
+					Step:     "cache",
+					Progress: 0.75 + (0.25 * (float64(len(lineIdxes)) / float64(taskSize))),
+				}
+				progJSON, _ := json.Marshal(progMsg)
+				fmt.Fprintf(resp, "event: progress\n")
+				fmt.Fprintf(resp, "data: %s\n\n", progJSON)
+				f.Flush()
 			}
 			sort.Ints(lineIdxes)
 			randomLines := make([]lib.OCRLine, 0)

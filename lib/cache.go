@@ -2,55 +2,139 @@ package lib
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
-// CacheEntry encodes cached information for a given Archive.org identifier
-type CacheEntry struct {
+// Identifier Cache
+// ==========================================================================
+
+// IdentifierCacheEntry encodes cached information for a given Archive.org identifier
+type IdentifierCacheEntry struct {
 	Identifier string `json:"id"`
 	NumPages   int    `json:"numPages"`
 }
 
-// Cache stores suitable identifiers
-type Cache struct {
+// IdentifierCache stores suitable identifiers
+type IdentifierCache struct {
 	path    string
-	entries map[int][]CacheEntry
+	entries map[int][]IdentifierCacheEntry
 }
 
-// NewCache constructs a new cache
-func NewCache(path string) *Cache {
-	return &Cache{
+// NewIdentifierCache constructs a new cache
+func NewIdentifierCache(path string) *IdentifierCache {
+	return &IdentifierCache{
 		path:    path,
-		entries: map[int][]CacheEntry{}}
+		entries: map[int][]IdentifierCacheEntry{}}
 }
 
-// LoadCache loads a cache from a JSON file
-func LoadCache(path string) *Cache {
+// LoadIdentifierCache loads a cache from a JSON file
+func LoadIdentifierCache(path string) *IdentifierCache {
 	cacheJSON, _ := ioutil.ReadFile(path)
-	cache := Cache{path: path}
+	cache := IdentifierCache{path: path}
 	json.Unmarshal(cacheJSON, &cache.entries)
 	return &cache
 }
 
 // Write the cache to disk
-func (c *Cache) Write() {
+func (c *IdentifierCache) Write() {
 	cacheJSON, _ := json.Marshal(c.entries)
 	ioutil.WriteFile(c.path, cacheJSON, 0644)
 }
 
 // Add a new entry to the cache
-func (c *Cache) Add(ident string, numPages int, year int) {
-	c.entries[year] = append(c.entries[year], CacheEntry{
+func (c *IdentifierCache) Add(ident string, numPages int, year int) {
+	c.entries[year] = append(c.entries[year], IdentifierCacheEntry{
 		Identifier: ident,
 		NumPages:   numPages})
 }
 
 // Random returns a random identifier for a given year
-func (c *Cache) Random(year int) CacheEntry {
+func (c *IdentifierCache) Random(year int) IdentifierCacheEntry {
 	pickIdx := rand.Intn(len(c.entries[year]))
 	entry := c.entries[year][pickIdx]
 	c.entries[year] = append(c.entries[year][:pickIdx], c.entries[year][pickIdx+1:]...)
 	c.Write()
 	return entry
+}
+
+// Line Image Cache
+// ==========================================================================
+
+// LineImageCache handles cached line images on disk
+type LineImageCache struct {
+	path string
+}
+
+// NewLineImageCache creates a new line image cache
+func NewLineImageCache(cacheDir string) *LineImageCache {
+	path := filepath.Join(cacheDir, "line_images")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.MkdirAll(path, 0755)
+	}
+	cache := LineImageCache{
+		path: filepath.Join(cacheDir, "line_images"),
+	}
+	go cache.purgeCacheWorker()
+	return &cache
+}
+
+// Purges files older than 7 days, once a day
+func (c *LineImageCache) purgeCacheWorker() {
+	for {
+		currentTime := time.Now()
+		files, _ := ioutil.ReadDir(c.path)
+		for _, finfo := range files {
+			if currentTime.Sub(finfo.ModTime()).Hours() >= 7.0*24 {
+				os.Remove(filepath.Join(c.path, finfo.Name()))
+			}
+		}
+		time.Sleep(24 * time.Hour)
+	}
+}
+
+// CacheLine downloads a line image and stores it on disk
+func (c *LineImageCache) CacheLine(url string, id string) (string, error) {
+	imgPath := filepath.Join(c.path, id+".png")
+	imgOut, err := os.Create(imgPath)
+	if err != nil {
+		return "", err
+	}
+	defer imgOut.Close()
+	imgResp, err := http.Get(strings.Replace(url, ".jpg", ".png", -1))
+	if err != nil {
+		return "", err
+	}
+	defer imgResp.Body.Close()
+	if _, err := io.Copy(imgOut, imgResp.Body); err != nil {
+		return "", err
+	}
+	return imgPath, nil
+}
+
+// GetLinePath returns the file path for a given line image
+func (c *LineImageCache) GetLinePath(id string) string {
+	imgPath := filepath.Join(c.path, id+".png")
+	if _, err := os.Stat(imgPath); os.IsNotExist(err) {
+		return ""
+	}
+	absPath, _ := filepath.Abs(imgPath)
+	return absPath
+}
+
+// PurgeLines removes all cached line images that match the prefix
+func (c *LineImageCache) PurgeLines(prefix string) error {
+	lines, _ := filepath.Glob(filepath.Join(c.path, prefix+"*.png"))
+	for _, fpath := range lines {
+		if err := os.Remove(fpath); err != nil {
+			return err
+		}
+	}
+	return nil
 }

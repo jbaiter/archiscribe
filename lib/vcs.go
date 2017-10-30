@@ -2,12 +2,10 @@ package lib
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -129,37 +127,39 @@ func (r *GitRepo) CleanUp() error {
 	return nil
 }
 
-func sha1digest(inp []byte) string {
-	hash := sha1.New()
-	hash.Write(inp)
-	return fmt.Sprintf("%x", hash.Sum(nil))[:8]
-}
-
 func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitRepo) (string, string, error) {
-	shaHash := sha1digest([]byte(line.ImageURL))
-	baseName := fmt.Sprintf("%s_%s", volumeIdent, shaHash)
+	lineID := MakeLineIdentifier(volumeIdent, line)
+	cachedPath := LineCache.GetLinePath(lineID)
+	if cachedPath == "" {
+		path, err := LineCache.CacheLine(line.ImageURL, lineID)
+		if err != nil {
+			return "", "", err
+		}
+		cachedPath = path
+	}
 
-	// Write line image
-	imgPath := filepath.Join(basePath, baseName+".png")
-	imgOut, err := os.Create(imgPath)
+	// Move line image from cache into repository
+	imgPath := filepath.Join(basePath, lineID+".png")
+	in, err := os.Open(cachedPath)
 	if err != nil {
 		return "", "", err
 	}
-	imgResp, err := http.Get(strings.Replace(line.ImageURL, ".jpg", ".png", -1))
+	out, err := os.Create(imgPath)
 	if err != nil {
 		return "", "", err
 	}
-	if _, err := io.Copy(imgOut, imgResp.Body); err != nil {
+	io.Copy(in, out)
+	in.Close()
+	out.Close()
+	if err := os.Remove(cachedPath); err != nil {
 		return "", "", err
 	}
-	imgOut.Close()
-	imgResp.Body.Close()
-	if err = repo.Add(imgPath); err != nil {
+	if err := repo.Add(imgPath); err != nil {
 		return "", "", err
 	}
 
 	// Write transcription
-	transPath := filepath.Join(basePath, baseName+".txt")
+	transPath := filepath.Join(basePath, lineID+".txt")
 	transOut, err := os.Create(transPath)
 	if err != nil {
 		return "", "", err
@@ -171,7 +171,7 @@ func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitR
 	if err := repo.Add(transPath); err != nil {
 		return "", "", err
 	}
-	return baseName + ".png", shaHash, nil
+	return imgPath, Sha1Digest([]byte(line.ImageURL)), nil
 }
 
 // GitWatcher TODO
@@ -202,11 +202,14 @@ outer:
 		for _, line := range task.Lines {
 			imgName, lineHash, err := writeLineData(ident, yearPath, line, repo)
 			if err != nil {
-				fmt.Println("Got an error while writing line!")
 				task.ResultChan <- SubmitResult{Error: err}
 				continue outer
 			}
 			lineMapping[lineHash] = imgName
+		}
+		if err := LineCache.PurgeLines(ident); err != nil {
+			task.ResultChan <- SubmitResult{Error: err}
+			continue outer
 		}
 		task.Metadata.Set("lines", lineMapping)
 		metaPath := filepath.Join(yearPath, ident+".json")

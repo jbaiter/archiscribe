@@ -24,12 +24,13 @@ type Result struct {
 
 // ProgressMessage contains progress information for the ABBYY parsing task
 type ProgressMessage struct {
+	Step       string  `json:"step"`
 	Progress   float64 `json:"progress"`
-	BytesTotal int64   `json:"bytesTotal"`
-	BytesRead  int64   `json:"bytesRead"`
-	PageNumber int     `json:"pageNumber"`
-	LineNumber int     `json:"lineNumber"`
-	Error      error   `json:"error"`
+	BytesTotal int64   `json:"bytesTotal,omitempty"`
+	BytesRead  int64   `json:"bytesRead,omitempty"`
+	PageNumber int     `json:"pageNumber,omitempty"`
+	LineNumber int     `json:"lineNumber,omitempty"`
+	Error      error   `json:"error,omitempty"`
 }
 
 func grabNext(totalOnly bool, count int, cursor string) (*Result, error) {
@@ -80,8 +81,8 @@ func getYear(doc *simplejson.Json) int {
 
 // CacheIdentifiers scrapes the Archive.org API and caches information about
 // relevant identifiers and their number of pages
-func CacheIdentifiers(path string) (*Cache, error) {
-	cache := NewCache(path)
+func CacheIdentifiers(path string) (*IdentifierCache, error) {
+	cache := NewIdentifierCache(path)
 	res, err := grabNext(true, -1, "")
 	if err != nil {
 		return nil, err
@@ -177,11 +178,12 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 		ident, ident)
 	resp, err := http.Get(boxURL)
 	if err != nil {
-		progressChan <- ProgressMessage{Error: err}
+		progressChan <- ProgressMessage{Error: err, Step: "fetch"}
 		return
 	} else if resp.StatusCode > 200 {
 		progressChan <- ProgressMessage{
-			Error: fmt.Errorf("Status %d while getting %s", resp.StatusCode, boxURL)}
+			Error: fmt.Errorf("Status %d while getting %s", resp.StatusCode, boxURL),
+			Step:  "fetch"}
 		return
 	}
 	numBytesTotal := resp.ContentLength
@@ -216,6 +218,7 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 		if prct > progPercent {
 			progPercent = prct
 			progressChan <- ProgressMessage{
+				Step:       "fetch",
 				Progress:   float64(progReader.BytesRead) / float64(numBytesTotal),
 				BytesTotal: numBytesTotal,
 				BytesRead:  progReader.BytesRead,
@@ -264,12 +267,6 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 func FetchLines(ident string) (chan ProgressMessage, chan []OCRLine, error) {
 	progressChan := make(chan ProgressMessage)
 	lineChan := make(chan []OCRLine)
-	isFrak, err := IsFraktur(ident)
-	if err != nil {
-		return nil, nil, err
-	} else if !isFrak {
-		return nil, nil, fmt.Errorf("%s does not seem to have a Fraktur typeface", ident)
-	}
 	go fetchLinesWorker(ident, 200, progressChan, lineChan)
 	return progressChan, lineChan, nil
 }

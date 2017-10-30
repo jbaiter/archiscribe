@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -47,8 +48,11 @@ published across {{.numYears}} years. Detailed statistics are available below.
 {{.worksTable}}
 `
 
-// IDCache is a global cache for suitable identifiers
-var IDCache *Cache
+// IDCache is the global cache for suitable identifiers
+var IDCache *IdentifierCache
+
+// LineCache is the global cache for line images
+var LineCache *LineImageCache
 
 // OCRLine contains information about an OCR line
 type OCRLine struct {
@@ -288,14 +292,42 @@ func createReadme(repoPath string) string {
 
 // InitCache initializes global identifier cache
 func InitCache() {
-	if _, err := os.Stat("./identifiers.json"); err != nil {
+	cacheDir, isSet := os.LookupEnv("ARCHISCRIBE_CACHE")
+	if !isSet {
+		cacheDir = "./cache"
+	}
+	cacheDir, _ = filepath.Abs(cacheDir)
+	dirStat, err := os.Stat(cacheDir)
+	if os.IsNotExist(err) {
+		os.MkdirAll(cacheDir, 0755)
+	} else if !dirStat.IsDir() {
+		log.Panicf("Cache directory '%s' is not a directory!", cacheDir)
+	} else if err != nil {
+		log.Panicf("Error setting up cache directory: %v", err)
+	}
+	LineCache = NewLineImageCache(cacheDir)
+	idCacheFile := filepath.Join(cacheDir, "identifiers.json")
+	if _, err := os.Stat(idCacheFile); err != nil {
 		fmt.Println("Caching identifiers...")
-		cache, err := CacheIdentifiers("./identifiers.json")
+		cache, err := CacheIdentifiers(idCacheFile)
 		if err != nil {
 			panic(err)
 		}
 		IDCache = cache
 	} else {
-		IDCache = LoadCache("./identifiers.json")
+		IDCache = LoadIdentifierCache(idCacheFile)
 	}
+}
+
+// Sha1Digest generates the SHA1 digest for the given data
+func Sha1Digest(inp []byte) string {
+	hash := sha1.New()
+	hash.Write(inp)
+	return fmt.Sprintf("%x", hash.Sum(nil))[:8]
+}
+
+// MakeLineIdentifier returns the unique identifier for a line
+func MakeLineIdentifier(volumeID string, line OCRLine) string {
+	shaHash := Sha1Digest([]byte(line.ImageURL))
+	return fmt.Sprintf("%s_%s", volumeID, shaHash)
 }
