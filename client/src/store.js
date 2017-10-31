@@ -38,6 +38,7 @@ let store = new Vuex.Store({
       let previous = state.previousSession
       state.previousSession = null
       this.replaceState({...state, ...previous, ...{currentScreen: 'single'}})
+      preloadLineImages(previous.lines.map(l => l.line))
     },
     startLoading (state) {
       state.isLoadingLines = true

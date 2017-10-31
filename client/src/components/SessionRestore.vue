@@ -6,8 +6,8 @@
     In einer vergangenen Sitzung wurden <strong>{{ numTranscribedLines }}</strong> Zeilen aus
       <strong><a :href="previousSession.metadata['identifier-access']">
         {{ previousSession.metadata.title }} ({{ previousSession.metadata.year }})
-      </a></strong> transkribiert und nicht abgeschickt.
-    <p>
+      </a></strong><span> </span>transkribiert und nicht abgeschickt.
+    </p>
     <p>
     Wollen Sie diese Sitzung <strong>wiederherstellen und fortsetzen?</strong> Wenn Sie die
     Sitzung <strong>verwerfen</strong> werden ihre bisherigen Transkriptionen <strong>unwiderruflich gelöscht</strong>.
