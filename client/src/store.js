@@ -27,10 +27,12 @@ let store = new Vuex.Store({
     commit: null
   },
   mutations: {
-    discardSession (state) {
+    discardSession (state, restart) {
       state.previousSession = null
       localStorage.removeItem('session')
-      this.commit('changeScreen', 'config')
+      if (restart) {
+        this.commit('changeScreen', 'config')
+      }
     },
     restoreSession (state) {
       let previous = state.previousSession
@@ -161,7 +163,7 @@ let store = new Vuex.Store({
       }).then(({ data }) => {
         commit('finishSubmit')
         commit('setCommitHash', data.commit)
-        commit('discardSession')
+        commit('discardSession', false)
       })
       // TODO: Handle error
     }
