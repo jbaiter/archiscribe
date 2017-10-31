@@ -33,6 +33,7 @@ import axios from 'axios'
 import { mapState } from 'vuex'
 
 import bus from './eventBus'
+import SessionRestore from './components/SessionRestore'
 import Setup from './components/Setup'
 import Toolbar from './components/Toolbar'
 import Keyboard from './components/Keyboard'
@@ -52,7 +53,8 @@ export default {
     'single': LineEditor,
     'multi': MultiLineEditor,
     'config': Setup,
-    'submit': Submission
+    'submit': Submission,
+    'restore': SessionRestore
   },
   data () {
     return {
@@ -62,10 +64,10 @@ export default {
   },
   computed: {
     showFooter () {
-      return this.currentScreen !== 'config' && this.currentScreen !== 'submit'
+      return ['multi', 'single'].includes(this.currentScreen)
     },
     showToolbar () {
-      return this.currentScreen !== 'config'
+      return !['config', 'restore'].includes(this.currentScreen)
     },
     showProgress () {
       return this.currentScreen === 'single'

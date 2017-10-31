@@ -6,13 +6,15 @@ import axios from 'axios'
 import { getRandomInt, preloadLineImages } from './util'
 
 Vue.use(Vuex)
+let storedSession = JSON.parse(localStorage.getItem('session'))
 
-export default new Vuex.Store({
+let store = new Vuex.Store({
   strict: process.env.NODE_ENV !== 'production',
   state: {
+    previousSession: storedSession,
     year: getRandomInt(1800, 1900),
     taskSize: 50,
-    currentScreen: 'config',
+    currentScreen: storedSession ? 'restore' : 'config',
     isLoadingLines: false,
     loadingProgress: undefined,
     lines: [],
@@ -25,6 +27,16 @@ export default new Vuex.Store({
     commit: null
   },
   mutations: {
+    discardSession (state) {
+      state.previousSession = null
+      localStorage.removeItem('session')
+      this.commit('changeScreen', 'config')
+    },
+    restoreSession (state) {
+      let previous = state.previousSession
+      state.previousSession = null
+      this.replaceState({...state, ...previous, ...{currentScreen: 'single'}})
+    },
     startLoading (state) {
       state.isLoadingLines = true
     },
@@ -87,7 +99,10 @@ export default new Vuex.Store({
       let transcription = line.transcription.substring(0, start) +
                           grapheme +
                           line.transcription.substring(end)
-      Vue.set(state.lines, state.currentLineIdx, {...line, transcription})
+      this.commit(
+        'updateTranscription',
+        { lineIdx: state.currentLineIdx,
+          transcription })
     },
     updateTranscription (state, {lineIdx, transcription}) {
       let line = state.lines[lineIdx]
@@ -146,8 +161,20 @@ export default new Vuex.Store({
       }).then(({ data }) => {
         commit('finishSubmit')
         commit('setCommitHash', data.commit)
+        commit('discardSession')
       })
       // TODO: Handle error
     }
   }
 })
+
+store.subscribe((mutation, state) => {
+  if (mutation.type !== 'updateTranscription') {
+    return
+  }
+  let { year, taskSize, lines, metadata, currentLineIdx } = state
+  localStorage.setItem('session', JSON.stringify({
+    year, taskSize, lines, metadata, currentLineIdx }))
+})
+
+export default store
