@@ -99,8 +99,8 @@ button.keycap {
   background: #fff;
   border-radius: 4px;
   box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.5);
-  font: 16px/40px sans-serif ;
-  font-weight: 600;
+  font: 20px/40px 'Vollkorn', serif;
+  font-weight: 500;
   text-align: center;
   color: #666;
 }

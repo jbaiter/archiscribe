@@ -152,9 +152,11 @@ export default {
 }
 </script>
 
-<style scoped>
+<style>
+@import url('https://fonts.googleapis.com/css?family=Vollkorn');
+
 body {
-  overflow-y: hidden;
+  font-family: 'Vollkorn', serif;
 }
 
 .main.columns {
