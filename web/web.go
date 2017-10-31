@@ -96,8 +96,8 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 				progChan = nil
 				break
 			}
-			// Downloading is only 75% of the overall progress
-			progMsg.Progress = 0.75 * progMsg.Progress
+			// Downloading is only 50% of the overall progress
+			progMsg.Progress = 0.5 * progMsg.Progress
 			progJSON, _ := json.Marshal(progMsg)
 			fmt.Fprintf(resp, "event: progress\n")
 			fmt.Fprintf(resp, "data: %s\n\n", progJSON)
@@ -128,7 +128,7 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 					lib.MakeLineIdentifier(ident, allLines[pickIdx]))
 				progMsg := lib.ProgressMessage{
 					Step:     "cache",
-					Progress: 0.75 + (0.25 * (float64(len(lineIdxes)) / float64(taskSize))),
+					Progress: 0.50 + (0.50 * (float64(len(lineIdxes)) / float64(taskSize))),
 				}
 				progJSON, _ := json.Marshal(progMsg)
 				fmt.Fprintf(resp, "event: progress\n")
