@@ -21,8 +21,8 @@ let store = new Vuex.Store({
     metadata: undefined,
     currentLineIdx: -1,
     isSubmitting: false,
-    author: null,
-    email: null,
+    author: localStorage.getItem('identity.author'),
+    email: localStorage.getItem('identity.email'),
     comment: null,
     commit: null
   },
@@ -130,9 +130,11 @@ let store = new Vuex.Store({
     },
     updateEmail (state, email) {
       state.email = email
+      localStorage.setItem('identity.email', email)
     },
     updateAuthor (state, author) {
       state.author = author
+      localStorage.setItem('identity.author', author)
     },
     updateComment (state, comment) {
       state.comment = comment
