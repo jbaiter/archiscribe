@@ -68,10 +68,15 @@ export default {
     },
     ...mapState(['lines', 'author', 'email', 'comment', 'commit', 'isSubmitting'])
   },
+  watch: {
+    anonymous (val) {
+      if (val) {
+        this.updateAuthor(null)
+        this.updateEmail(null)
+      }
+    }
+  },
   methods: {
-    log (val) {
-      console.log(val)
-    },
     ...mapActions(['submit', 'resetWorkflow']),
     ...mapMutations(['resetWorkflow', 'updateAuthor', 'updateEmail', 'updateComment'])
   }
