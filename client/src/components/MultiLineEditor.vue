@@ -12,7 +12,8 @@
           <div class="control is-clearfix is-expanded">
             <input @focus="changeLine(idx)" ref="transcription"
                    class="input mousetrap" :value="line.transcription"
-                   @input="onInput(idx, $event.target.value)" />
+                   @input="onInput(idx, $event.target.value)"
+                   @keyup.enter="focusLine(idx+1)" />
           </div>
           <a class="button focus-btn" @click="zoomLine(idx)"
               title="Detailansicht">
@@ -39,6 +40,13 @@ export default {
   name: 'MultiLineEditor',
   components: { LineImage },
   methods: {
+    focusLine (idx) {
+      if (idx >= this.$refs.transcription.length) {
+        idx = 0
+      }
+      this.$refs.line[idx].scrollIntoView()
+      this.$refs.transcription[idx].focus()
+    },
     zoomLine (idx) {
       this.changeLine(idx)
       this.changeScreen('single')
