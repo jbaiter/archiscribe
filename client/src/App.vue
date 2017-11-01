@@ -7,25 +7,31 @@
                     :max="lines.length" :current="currentLineIdx"/>
     </section>
     <section class="main columns is-desktop"
-             :style="{'margin-bottom': marginBottom}">
+             :style="{'margin-bottom': marginBottom + 'px'}">
       <component v-bind:is='currentScreen' />
     </section>
-    <footer ref="footer" class="footer" v-if="showFooter">
-      <div class="help-toggle">
-        <label class="switch">
-          <span class="switch-left">
-            <b-icon icon="keyboard" :type="showHelp ? 'is-black' : 'is-primary'"/>
-          </span>
-          <input type="checkbox" v-model="showHelp" />
-          <span class="check" />
-          <span class="switch-right">
-            <b-icon icon="help" :type="showHelp ? 'is-primary' : 'is-black'"/>
-          </span>
-        </label>
-      </div>
-      <fraktur-help v-if="showHelp" />
-      <keyboard v-else />
-    </footer>
+    <div class="footer-wrapper">
+      <a v-if="showFooter" @click="toggleBottom" class="toggle-bottom is-pulled-right"
+         :title="toggleBottomTitle">
+        <b-icon :icon="toggleBottomIcon" />
+      </a>
+      <footer ref="footer" class="footer" v-if="showFooter && !bottomIsHidden">
+        <div class="help-toggle">
+          <label class="switch">
+            <span class="switch-left">
+              <b-icon icon="keyboard" :type="showHelp ? 'is-black' : 'is-primary'"/>
+            </span>
+            <input type="checkbox" v-model="showHelp" />
+            <span class="check" />
+            <span class="switch-right">
+              <b-icon icon="help" :type="showHelp ? 'is-primary' : 'is-black'"/>
+            </span>
+          </label>
+        </div>
+        <fraktur-help v-if="showHelp" />
+        <keyboard v-else />
+      </footer>
+    </div>
   </div>
 </template>
 
@@ -60,10 +66,30 @@ export default {
   data () {
     return {
       showHelp: false,
-      marginBottom: null
+      marginBottom: null,
+      bottomIsHidden: false
     }
   },
   computed: {
+    toggleBottomIcon () {
+      if (this.bottomIsHidden) {
+        return 'expand_less'
+      } else {
+        return 'expand_more'
+      }
+    },
+    toggleBottomTitle () {
+      if (this.bottomIsHidden) {
+        return 'Tastatur/Lesehilfe anzeigen'
+      } else {
+        return 'Tastatur/Lesehilfe verstecken'
+      }
+    },
+    truncatedTitle () {
+      let cut = this.metadata.title.indexOf(' ', 96)
+      if (cut === -1) return this.metadata.title
+      return this.metadata.title.substring(0, cut) + '‥'
+    },
     showFooter () {
       return ['multi', 'single'].includes(this.currentScreen)
     },
@@ -72,6 +98,9 @@ export default {
     },
     showProgress () {
       return this.currentScreen === 'single'
+    },
+    showKeyboard () {
+      return !this.showHelp && this.showBottom
     },
     ...mapState(['currentScreen', 'lines', 'metadata', 'currentLineIdx'])
   },
@@ -84,6 +113,10 @@ export default {
     }
   },
   methods: {
+    toggleBottom () {
+      this.bottomIsHidden = !this.bottomIsHidden
+      this.$nextTick(this.adjustPaddingBottom)
+    },
     onTranscriptionDone (transcription) {
       this.lines[this.currentLineIdx].transcription = transcription
       this.onChangeLine(this.currentLineIdx + 1)
@@ -137,7 +170,9 @@ export default {
     },
     adjustPaddingBottom: function () {
       if (this.$refs.footer) {
-        this.marginBottom = this.$refs.footer.offsetHeight + 'px'
+        this.marginBottom = this.$refs.footer.offsetHeight
+      } else {
+        this.marginBottom = 0
       }
     }
   },
