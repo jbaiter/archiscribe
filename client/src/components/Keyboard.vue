@@ -93,15 +93,18 @@ export default {
 
 button.keycap {
   display:inline-block;
-  width:40px;
-  height:40px;
+  width:50px;
+  height:50px;
   margin: 3px;
   background: #fff;
   border-radius: 4px;
   box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.5);
-  font: 20px/40px 'Vollkorn', serif;
+  font: 30px/50px 'Vollkorn', serif;
   font-weight: 500;
   text-align: center;
-  color: #666;
+  color: #444;
+}
+
+button.keycap {
 }
 </style>
