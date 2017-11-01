@@ -1,6 +1,7 @@
 <template>
   <div id="app" class="container is-widescreen">
     <section class="header" v-if="showToolbar">
+      <h1><a :href="metadata['identifier-access']">{{ truncatedTitle }}</a> ({{metadata.year}})</h1>
       <toolbar />
       <progress-bar v-if="showProgress"
                     :max="lines.length" :current="currentLineIdx"/>
@@ -169,9 +170,13 @@ body {
 }
 
 .footer {
+  padding: 1.5vh 0;
+}
+
+.footer-wrapper {
+  width: 100%;
   position: fixed;
   bottom: 0px;
-  padding: 1.5vh 0;
   max-width: 1344px;
 }
 
@@ -186,5 +191,10 @@ body {
 
 .switch-right {
   padding-left: 0.5em;
+}
+
+.header h1 {
+  display: inline-block;
+  font-size: 1.3rem;
 }
 </style>
