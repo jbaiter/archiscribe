@@ -2,12 +2,9 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import Buefy from 'buefy'
-
-import App from './App'
-
-import store from './store'
-
 import 'buefy/lib/buefy.css'
+import App from './App'
+import store from './store'
 
 Vue.use(Buefy)
 
