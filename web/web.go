@@ -7,8 +7,10 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"path"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/gobuffalo/packr"
 	"github.com/julienschmidt/httprouter"
@@ -178,7 +180,22 @@ func Serve(port int) {
 	})
 	router.GET("/api/lines/:year", ProduceLines)
 	router.POST("/api/transcriptions", SubmitTranscription)
-	router.NotFound = http.FileServer(box).ServeHTTP
+
+	// NOTE: This is a bit clumsy, since Box.Open does not return an error
+	// that is recognized by os.IsNotExit, which is why we have to pass
+	// our own logic to return a 404 error for non-existing files.
+	fileServer := http.FileServer(box)
+	router.NotFound = func(w http.ResponseWriter, r *http.Request) {
+		upath := r.URL.Path
+		if !strings.HasPrefix(upath, "/") {
+			upath = "/" + upath
+		}
+		if box.Has(path.Clean(upath)) {
+			fileServer.ServeHTTP(w, r)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}
 
 	go lib.GitWatcher("/tmp/temp-corpus", taskChan)
 
