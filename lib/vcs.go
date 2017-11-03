@@ -205,7 +205,7 @@ outer:
 				task.ResultChan <- SubmitResult{Error: err}
 				continue outer
 			}
-			lineMapping[lineHash] = imgName
+			lineMapping[lineHash] = line.ImageURL
 		}
 		if err := LineCache.PurgeLines(ident); err != nil {
 			task.ResultChan <- SubmitResult{Error: err}
