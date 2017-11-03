@@ -229,7 +229,7 @@ func createReadme(repoPath string) string {
 		manifestLink := fmt.Sprintf(
 			"[Manifest](https://iiif.archivelab.org/iiif/%s/manifest.json)", ident)
 		miradorLink := fmt.Sprintf(
-			"[Mirador](ttps://iiif.archivelab.org/iiif/%s)", ident)
+			"[Mirador](https://iiif.archivelab.org/iiif/%s)", ident)
 		metaRows = append(metaRows, []string{
 			meta.Get("title").MustString(), meta.Get("date").MustString(),
 			archiveLink, fmt.Sprintf("%s/%s", manifestLink, miradorLink)})
