@@ -148,7 +148,7 @@ func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitR
 	if err != nil {
 		return "", "", err
 	}
-	io.Copy(in, out)
+	io.Copy(out, in)
 	in.Close()
 	out.Close()
 	if err := os.Remove(cachedPath); err != nil {
