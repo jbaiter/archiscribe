@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -107,7 +106,7 @@ func (c *LineImageCache) CacheLine(url string, id string) (string, error) {
 		return "", err
 	}
 	defer imgOut.Close()
-	imgResp, err := http.Get(strings.Replace(url, ".jpg", ".png", -1))
+	imgResp, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}

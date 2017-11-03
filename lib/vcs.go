@@ -130,6 +130,8 @@ func (r *GitRepo) CleanUp() error {
 func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitRepo) (string, string, error) {
 	lineID := MakeLineIdentifier(volumeIdent, line)
 	cachedPath := LineCache.GetLinePath(lineID)
+	// Frontend uses JPEG, we want PNG
+	line.ImageURL = strings.Replace(line.ImageURL, ".jpg", ".png", -1)
 	if cachedPath == "" {
 		path, err := LineCache.CacheLine(line.ImageURL, lineID)
 		if err != nil {
