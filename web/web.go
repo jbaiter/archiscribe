@@ -171,7 +171,7 @@ func addPrefix(prefix string, h http.Handler) http.Handler {
 }
 
 // Serve the web application
-func Serve(port int) {
+func Serve(port int, repoPath string) {
 	box := packr.NewBox("../client/dist")
 
 	router := httprouter.New()
@@ -197,7 +197,7 @@ func Serve(port int) {
 		}
 	}
 
-	go lib.GitWatcher("/tmp/temp-corpus", taskChan)
+	go lib.GitWatcher(repoPath, taskChan)
 
 	fmt.Printf("Serving on port %d\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
