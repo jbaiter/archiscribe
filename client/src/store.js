@@ -127,7 +127,7 @@ let store = new Vuex.Store({
       state.metadata = null
       state.currentScreen = 'config'
       state.commit = null
-      state.comment = false
+      state.comment = null
     },
     updateEmail (state, email) {
       state.email = email
