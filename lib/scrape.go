@@ -244,7 +244,7 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 				continue
 			}
 			iiifURL := fmt.Sprintf(
-				"https://iiif.archivelab.org/iiif/%s$%d/%d,%d,%d,%d/full/0/default.jpg",
+				"https://iiif.archivelab.org/iiif/%s$%d/%d,%d,%d,%d/full/0/default.png",
 				ident, currentPageNo, x, y, width, height)
 			if len(lines) > 0 {
 				lines[len(lines)-1].NextImageURL = iiifURL

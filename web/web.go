@@ -126,7 +126,7 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 				lineIdxes = append(lineIdxes, pickIdx)
 				lineIdxesMap[pickIdx] = true
 				lib.LineCache.CacheLine(
-					strings.Replace(allLines[pickIdx].ImageURL, ".jpg", ".png", -1),
+					allLines[pickIdx].ImageURL,
 					lib.MakeLineIdentifier(ident, allLines[pickIdx]))
 				progMsg := lib.ProgressMessage{
 					Step:     "cache",

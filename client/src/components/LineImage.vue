@@ -3,7 +3,7 @@
     <div v-if="loading" class="control is-loading">
       <input disabled placeholder="Bild wird geladen..." class="input" />
     </div>
-    <img :src="imageSrc" :class="classes" :title="label"
+    <img :src="imageSrc.replace(/\.png$/, '.jpg')" :class="classes" :title="label"
          @load="onLoaded" @error="onError"
          :style="{'display': loaded ? 'block': 'none'}" />
     <div v-if="error" class="box is-error">
