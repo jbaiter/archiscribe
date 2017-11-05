@@ -174,7 +174,7 @@ let store = new Vuex.Store({
 })
 
 store.subscribe((mutation, state) => {
-  if (mutation.type !== 'updateTranscription') {
+  if (!['updateTranscription', 'setLines'].includes(mutation.type)) {
     return
   }
   let { year, taskSize, lines, metadata, currentLineIdx } = state
