@@ -64,7 +64,8 @@ Object.entries(SPECIAL_CHARACTERS)
   .map(([grapheme, key]) => {
     if (key != null) {
       KEY_COMBINATIONS[grapheme] = 'alt+' + key
-      Mousetrap.bind('alt+' + key, () => {
+      Mousetrap.bind('alt+' + key, (e) => {
+        e.preventDefault()
         bus.$emit('insert-grapheme', grapheme)
       })
     }
