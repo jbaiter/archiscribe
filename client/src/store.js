@@ -159,7 +159,7 @@ let store = new Vuex.Store({
       commit('startSubmit')
       axios.post('/api/transcriptions', {
         id: state.metadata.identifier,
-        lines: state.lines,
+        lines: state.lines.filter(l => l.transcription),
         author: state.author ? `${state.author} <${state.email}>` : null,
         comment: state.comment,
         metadata: state.metadata

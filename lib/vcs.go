@@ -200,6 +200,9 @@ outer:
 		os.MkdirAll(yearPath, 0755)
 		lineMapping := make(map[string]string)
 		for _, line := range task.Lines {
+			if line.Transcription == "" {
+				continue
+			}
 			_, lineHash, err := writeLineData(ident, yearPath, line, repo)
 			if err != nil {
 				task.ResultChan <- SubmitResult{Error: err}
