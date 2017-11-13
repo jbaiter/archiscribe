@@ -264,9 +264,9 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 }
 
 // FetchLines fetches OCR lines for a given Archive.org identifier
-func FetchLines(ident string) (chan ProgressMessage, chan []OCRLine, error) {
+func FetchLines(ident string) (chan ProgressMessage, chan []OCRLine) {
 	progressChan := make(chan ProgressMessage)
 	lineChan := make(chan []OCRLine)
 	go fetchLinesWorker(ident, 200, progressChan, lineChan)
-	return progressChan, lineChan, nil
+	return progressChan, lineChan
 }
