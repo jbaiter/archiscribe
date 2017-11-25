@@ -4,8 +4,8 @@
     <h1 class="title">Sitzung wiederherstellen?</h1>
     <p>
     In einer vergangenen Sitzung wurden <strong>{{ numTranscribedLines }}</strong> Zeilen aus
-      <strong><a :href="previousSession.metadata['identifier-access']">
-        {{ previousSession.metadata.title }} ({{ previousSession.metadata.year }})
+    <strong><a :href="`https://archive.org/details/${previousSession.document.id}`">
+        {{ previousSession.document.title }} ({{ previousSession.document.year }})
       </a></strong><span> </span>transkribiert und nicht abgeschickt.
     </p>
     <p>

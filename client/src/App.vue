@@ -1,7 +1,7 @@
 <template>
   <div id="app" class="container is-widescreen">
     <section class="header" v-if="showToolbar">
-      <h1><a :href="metadata['identifier-access']">{{ truncatedTitle }}</a> ({{metadata.year}})</h1>
+      <h1><a :href="`https://archive.org/details/${document.id}`">{{ truncatedTitle }}</a> ({{document.year}})</h1>
       <toolbar />
       <progress-bar v-if="showProgress"
                     :max="lines.length" :current="currentLineIdx"/>
@@ -86,9 +86,9 @@ export default {
       }
     },
     truncatedTitle () {
-      let cut = this.metadata.title.indexOf(' ', 96)
-      if (cut === -1) return this.metadata.title
-      return this.metadata.title.substring(0, cut) + '‥'
+      let cut = this.document.title.indexOf(' ', 96)
+      if (cut === -1) return this.document.title
+      return this.document.title.substring(0, cut) + '‥'
     },
     showFooter () {
       return ['multi', 'single'].includes(this.currentScreen)
@@ -102,7 +102,7 @@ export default {
     showKeyboard () {
       return !this.showHelp && this.showBottom
     },
-    ...mapState(['currentScreen', 'lines', 'metadata', 'currentLineIdx'])
+    ...mapState(['currentScreen', 'lines', 'document', 'currentLineIdx'])
   },
   watch: {
     showFooter (val) {
@@ -140,7 +140,7 @@ export default {
         'identity',
         JSON.stringify({email, name, anonymous: (!name && !email)}))
       let data = {
-        metadata: this.metadata,
+        document: this.document,
         lines: this.lines.filter((l) => l.transcription !== '')
       }
       if (email && name) {
@@ -160,7 +160,7 @@ export default {
     onContinue: function () {
       this.isLoading = false
       this.lines = []
-      this.metadata = null
+      this.document = null
       this.currentLineIdx = -1
       this.selectedYear = null
       this.currentScreen = 'config'

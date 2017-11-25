@@ -7,6 +7,21 @@ import { getRandomInt, preloadLineImages } from './util'
 
 Vue.use(Vuex)
 let storedSession = JSON.parse(localStorage.getItem('session'))
+if (storedSession && !storedSession.document) {
+  if (!storedSession.metadata) {
+    localStorage.removeItem('session')
+    storedSession = null
+  } else {
+    // Migrate from old format
+    storedSession.document = {
+      id: storedSession.metadata.id,
+      title: storedSession.metadata.title,
+      year: storedSession.year,
+      manifest: `https://iiif.archivelab.org/iiif/${storedSession.id}/manifest.json`
+    }
+    storedSession.metadata = undefined
+  }
+}
 
 let store = new Vuex.Store({
   strict: process.env.NODE_ENV !== 'production',
@@ -18,7 +33,7 @@ let store = new Vuex.Store({
     isLoadingLines: false,
     loadingProgress: undefined,
     lines: [],
-    metadata: undefined,
+    document: undefined,
     currentLineIdx: -1,
     isSubmitting: false,
     author: localStorage.getItem('identity.author'),
@@ -46,8 +61,8 @@ let store = new Vuex.Store({
     stopLoading (state) {
       state.isLoadingLines = false
     },
-    setMetadata (state, metadata) {
-      state.metadata = metadata
+    setDocument (state, document) {
+      state.document = document
     },
     updateProgress (state, progress) {
       state.loadingProgress = progress
@@ -124,7 +139,7 @@ let store = new Vuex.Store({
       state.year = getRandomInt(1800, 1900)
       state.lines = []
       state.currentLineIdx = -1
-      state.metadata = null
+      state.document = null
       state.currentScreen = 'config'
       state.commit = null
       state.comment = null
@@ -146,7 +161,7 @@ let store = new Vuex.Store({
       commit('startLoading')
       const eventSource = new EventSource(`/api/lines/${state.year}?taskSize=${state.taskSize}`)
       eventSource.addEventListener(
-        'metadata', (evt) => commit('setMetadata', JSON.parse(evt.data)))
+        'document', (evt) => commit('setDocument', JSON.parse(evt.data)))
       eventSource.addEventListener(
         'progress', (evt) => commit('updateProgress', JSON.parse(evt.data)))
       eventSource.addEventListener('lines', (evt) => {
@@ -157,12 +172,13 @@ let store = new Vuex.Store({
     },
     submit ({ commit, state }) {
       commit('startSubmit')
-      axios.post('/api/transcriptions', {
-        id: state.metadata.identifier,
-        lines: state.lines.filter(l => l.transcription),
+      axios.post('/api/documents', {
+        document: {
+          lines: state.lines.filter(l => l.transcription),
+          ...this.state.document
+        },
         author: state.author ? `${state.author} <${state.email}>` : null,
-        comment: state.comment,
-        metadata: state.metadata
+        comment: state.comment
       }).then(({ data }) => {
         commit('finishSubmit')
         commit('setCommitHash', data.commit)
@@ -177,9 +193,9 @@ store.subscribe((mutation, state) => {
   if (!['updateTranscription', 'setLines'].includes(mutation.type)) {
     return
   }
-  let { year, taskSize, lines, metadata, currentLineIdx } = state
+  let { year, taskSize, lines, document, currentLineIdx } = state
   localStorage.setItem('session', JSON.stringify({
-    year, taskSize, lines, metadata, currentLineIdx }))
+    year, taskSize, lines, document, currentLineIdx }))
 })
 
 export default store
