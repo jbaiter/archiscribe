@@ -55,7 +55,13 @@ func (p *lineProducer) produceLines() {
 	headers.Set("Connection", "keep-alive")
 
 	metadata, _ := lib.GetMetadata(p.ident)
-	p.writeMessage("metadata", metadata)
+	doc := lib.Document{
+		Identifier: p.ident,
+		Title:      metadata.Get("title").MustString(),
+		Year:       p.year,
+		Manifest:   fmt.Sprintf("https://iiif.archivelab.org/iiif/%s/manifest.json", p.ident),
+	}
+	p.writeMessage("document", doc)
 	p.streamLines()
 }
 

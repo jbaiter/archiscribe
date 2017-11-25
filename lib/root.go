@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/bitly/go-simplejson"
+	simplejson "github.com/bitly/go-simplejson"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -61,17 +61,17 @@ type OCRLine struct {
 
 // TaskDefinition encodes a finished transcription along with author information
 type TaskDefinition struct {
-	Transcription Transcription     `json:"transcription"`
-	Author        string            `json:"author,omitempty"`
-	Email         string            `json:"email,omitempty"`
-	Comment       string            `json:"comment,omitempty"`
-	ResultChan    chan SubmitResult `json:"-"`
+	Document   Document          `json:"document"`
+	Author     string            `json:"author,omitempty"`
+	Email      string            `json:"email,omitempty"`
+	Comment    string            `json:"comment,omitempty"`
+	ResultChan chan SubmitResult `json:"-"`
 }
 
 // SubmitResult holds the result of a submission
 type SubmitResult struct {
-	Transcription Transcription
-	Error         error
+	Document Document
+	Error    error
 }
 
 // ProgressReader wraps another reader and exposes progress information

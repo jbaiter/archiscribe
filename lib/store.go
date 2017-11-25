@@ -17,14 +17,14 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-// TranscriptionStore offers an interface to the transcriptions
-type TranscriptionStore struct {
+// DocumentStore offers an interface to the transcriptions
+type DocumentStore struct {
 	basePath string
 	repo     *GitRepo
 }
 
-// Transcription holds all information about a transcription
-type Transcription struct {
+// Document holds all information about a transcription document
+type Document struct {
 	Identifier string     `json:"id"`
 	Title      string     `json:"title"`
 	Year       int        `json:"year"`
@@ -36,21 +36,21 @@ type Transcription struct {
 
 var lineNamePat = regexp.MustCompile(`(.+?)_([a-z0-9]{8})`)
 
-// NewTranscriptionStore creates a new transcription store
-func NewTranscriptionStore(path string) (*TranscriptionStore, error) {
+// NewDocumentStore creates a new document store
+func NewDocumentStore(path string) (*DocumentStore, error) {
 	repo, err := GitOpen(path)
 	if err != nil {
 		return nil, err
 	}
-	return &TranscriptionStore{
+	return &DocumentStore{
 		basePath: path,
 		repo:     repo,
 	}, nil
 }
 
-// Details retrieves a single Transcription by its identifier
-func (s *TranscriptionStore) Details(ident string) *Transcription {
-	var trans Transcription
+// Details retrieves a single Document by its identifier
+func (s *DocumentStore) Details(ident string) *Document {
+	var doc Document
 	transPath := filepath.Join(s.basePath, "transcriptions")
 	globPath := filepath.Join(transPath, "*", ident+".json")
 	metaPaths, err := filepath.Glob(globPath)
@@ -65,16 +65,16 @@ func (s *TranscriptionStore) Details(ident string) *Transcription {
 	if err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(raw, &trans); err != nil {
+	if err := json.Unmarshal(raw, &doc); err != nil {
 		panic(err)
 	}
-	for idx, line := range trans.Lines {
+	for idx, line := range doc.Lines {
 		textPath := strings.Replace(metaPath, ".json", "_"+line.Identifier+".txt", -1)
 		text, err := ioutil.ReadFile(textPath)
 		if err != nil {
 			panic(err)
 		}
-		trans.Lines[idx].Transcription = strings.TrimSpace(string(text))
+		doc.Lines[idx].Transcription = strings.TrimSpace(string(text))
 	}
 	transFiles, err := filepath.Glob(strings.Replace(metaPath, ".json", ".*", -1))
 	if err != nil {
@@ -89,32 +89,32 @@ func (s *TranscriptionStore) Details(ident string) *Transcription {
 	if err != nil {
 		panic(err)
 	}
-	trans.History = log
-	return &trans
+	doc.History = log
+	return &doc
 }
 
-// List all transcriptions
-func (s *TranscriptionStore) List() []*Transcription {
+// List all documents
+func (s *DocumentStore) List() []*Document {
 	transPath := filepath.Join(s.basePath, "transcriptions")
 	metaPaths, err := filepath.Glob(filepath.Join(transPath, "*", "*.json"))
-	transcriptions := make([]*Transcription, 0, len(metaPaths))
+	documents := make([]*Document, 0, len(metaPaths))
 	if err != nil {
 		panic(err)
 	}
 	for _, metaPath := range metaPaths {
-		trans := s.Details(strings.Replace(filepath.Base(metaPath), ".json", "", -1))
-		trans.NumLines = len(trans.Lines)
-		trans.Lines = trans.Lines[:0]
-		if trans.Identifier != "" {
-			transcriptions = append(transcriptions, trans)
+		doc := s.Details(strings.Replace(filepath.Base(metaPath), ".json", "", -1))
+		doc.NumLines = len(doc.Lines)
+		doc.Lines = doc.Lines[:0]
+		if doc.Identifier != "" {
+			documents = append(documents, doc)
 		}
 	}
-	return transcriptions
+	return documents
 }
 
-func (s *TranscriptionStore) removeDeletedLines(trans Transcription) {
-	basePath := filepath.Join(s.basePath, "transcriptions", strconv.Itoa(trans.Year))
-	globPat := basePath + "/" + trans.Identifier + "*.png"
+func (s *DocumentStore) removeDeletedLines(doc Document) {
+	basePath := filepath.Join(s.basePath, "transcriptions", strconv.Itoa(doc.Year))
+	globPat := basePath + "/" + doc.Identifier + "*.png"
 	lpaths, _ := filepath.Glob(globPat)
 	for _, lpath := range lpaths {
 		baseName := strings.TrimSuffix(filepath.Base(lpath), filepath.Ext(lpath))
@@ -124,7 +124,7 @@ func (s *TranscriptionStore) removeDeletedLines(trans Transcription) {
 		}
 		ident := match[2]
 		found := false
-		for _, line := range trans.Lines {
+		for _, line := range doc.Lines {
 			if line.Identifier == ident {
 				found = true
 				break
@@ -141,8 +141,8 @@ func (s *TranscriptionStore) removeDeletedLines(trans Transcription) {
 	}
 }
 
-// Save a transcription
-func (s *TranscriptionStore) Save(trans Transcription, author string, email string, comment string) (*Transcription, error) {
+// Save a document
+func (s *DocumentStore) Save(doc Document, author string, email string, comment string) (*Document, error) {
 	if err := s.repo.CleanUp(); err != nil {
 		return nil, err
 	}
@@ -151,51 +151,51 @@ func (s *TranscriptionStore) Save(trans Transcription, author string, email stri
 	}
 
 	yearPath := filepath.Join(
-		s.basePath, "transcriptions", strconv.Itoa(trans.Year))
+		s.basePath, "transcriptions", strconv.Itoa(doc.Year))
 	os.MkdirAll(yearPath, 0755)
 
 	// Clear history, we don't persist it to disk
-	trans.History = trans.History[:0]
-	metaPath := filepath.Join(yearPath, trans.Identifier+".json")
+	doc.History = doc.History[:0]
+	metaPath := filepath.Join(yearPath, doc.Identifier+".json")
 	isUpdate := false
 	if _, err := os.Stat(metaPath); !os.IsNotExist(err) {
 		isUpdate = true
 	}
 
-	ident := trans.Identifier
+	ident := doc.Identifier
 	toRemove := make(map[string]bool)
-	for idx, line := range trans.Lines {
+	for idx, line := range doc.Lines {
 		if line.Transcription == "" {
-			// Not a transcribed line, removing from transcription
+			// Not a transcribed line, removing from document
 			toRemove[line.Identifier] = true
 			continue
 		}
-		err := s.writeLineData(trans, line)
+		err := s.writeLineData(doc, line)
 		if err != nil {
 			return nil, err
 		}
 		// We don't store the transcriptions in the JSON
-		trans.Lines[idx].Transcription = ""
+		doc.Lines[idx].Transcription = ""
 	}
-	filtered := make([]OCRLine, 0, len(trans.Lines)-len(toRemove))
-	for _, line := range trans.Lines {
+	filtered := make([]OCRLine, 0, len(doc.Lines)-len(toRemove))
+	for _, line := range doc.Lines {
 		if !toRemove[line.Identifier] {
 			filtered = append(filtered, line)
 		}
 	}
-	trans.Lines = filtered
+	doc.Lines = filtered
 	if err := LineCache.PurgeLines(ident); err != nil {
 		return nil, err
 	}
 	if isUpdate {
-		s.removeDeletedLines(trans)
+		s.removeDeletedLines(doc)
 	}
 
 	// Write metadata
 	metaOut, _ := os.Create(metaPath)
 	enc := json.NewEncoder(metaOut)
 	enc.SetIndent("", "  ")
-	enc.Encode(trans)
+	enc.Encode(doc)
 	metaOut.Close()
 	if err := s.repo.Add(metaPath); err != nil {
 		return nil, err
@@ -211,13 +211,13 @@ func (s *TranscriptionStore) Save(trans Transcription, author string, email stri
 	}
 	var commitMessage string
 	if isUpdate {
-		commitMessage = fmt.Sprintf("Corrected %s (%d)", trans.Identifier, trans.Year)
+		commitMessage = fmt.Sprintf("Corrected %s (%d)", doc.Identifier, doc.Year)
 		changes, err := s.repo.Diff(true)
 		if err != nil {
 			return nil, err
 		}
 		if len(changes) == 0 {
-			return s.Details(trans.Identifier), nil
+			return s.Details(doc.Identifier), nil
 		}
 		numModified := 0
 		numDeleted := 0
@@ -242,8 +242,8 @@ func (s *TranscriptionStore) Save(trans Transcription, author string, email stri
 		}
 	} else {
 		commitMessage = fmt.Sprintf(
-			"Transcribed %d lines from %s (%d)", len(trans.Lines), trans.Identifier,
-			trans.Year)
+			"Transcribed %d lines from %s (%d)", len(doc.Lines), doc.Identifier,
+			doc.Year)
 	}
 	if comment != "" {
 		commitMessage += ("\n" + comment)
@@ -252,13 +252,13 @@ func (s *TranscriptionStore) Save(trans Transcription, author string, email stri
 		return nil, err
 	}
 	//s.repo.Push("origin", "master")
-	return s.Details(trans.Identifier), nil
+	return s.Details(doc.Identifier), nil
 }
 
-func (s *TranscriptionStore) writeLineData(trans Transcription, line OCRLine) error {
+func (s *DocumentStore) writeLineData(doc Document, line OCRLine) error {
 	basePath := filepath.Join(
-		s.basePath, "transcriptions", strconv.Itoa(trans.Year),
-		fmt.Sprintf("%s_%s", trans.Identifier, line.Identifier))
+		s.basePath, "transcriptions", strconv.Itoa(doc.Year),
+		fmt.Sprintf("%s_%s", doc.Identifier, line.Identifier))
 	imgPath := basePath + ".png"
 	if _, err := os.Stat(imgPath); os.IsNotExist(err) {
 		// Obtain image file
@@ -304,31 +304,31 @@ func (s *TranscriptionStore) writeLineData(trans Transcription, line OCRLine) er
 	return s.repo.Add(transPath)
 }
 
-func (s *TranscriptionStore) createReadme() string {
+func (s *DocumentStore) createReadme() string {
 	// FIXME: Counts are still broken
-	transcriptions := s.List()
-	sort.Slice(transcriptions, func(i, j int) bool {
-		return transcriptions[i].Year < transcriptions[j].Year
+	documents := s.List()
+	sort.Slice(documents, func(i, j int) bool {
+		return documents[i].Year < documents[j].Year
 	})
 
 	numLinesTotal := 0
 	yearCount := map[int]int{}
 	decadeCount := map[int]int{}
 	metaRows := [][]string{}
-	for _, trans := range transcriptions {
-		numLinesTotal += trans.NumLines
-		decade := (trans.Year / 10) * 10
-		yearCount[trans.Year] += trans.NumLines
-		decadeCount[decade] += trans.NumLines
+	for _, doc := range documents {
+		numLinesTotal += doc.NumLines
+		decade := (doc.Year / 10) * 10
+		yearCount[doc.Year] += doc.NumLines
+		decadeCount[decade] += doc.NumLines
 		archiveLink := fmt.Sprintf(
-			"[%s](http://archive.org/details/%s)", trans.Identifier, trans.Identifier)
+			"[%s](http://archive.org/details/%s)", doc.Identifier, doc.Identifier)
 		manifestLink := fmt.Sprintf(
 			"[Manifest](https://iiif.archivelab.org/iiif/%s/manifest.json)",
-			trans.Identifier)
+			doc.Identifier)
 		miradorLink := fmt.Sprintf(
-			"[Mirador](https://iiif.archivelab.org/iiif/%s)", trans.Identifier)
+			"[Mirador](https://iiif.archivelab.org/iiif/%s)", doc.Identifier)
 		metaRows = append(metaRows, []string{
-			trans.Title, strconv.Itoa(trans.Year),
+			doc.Title, strconv.Itoa(doc.Year),
 			archiveLink, fmt.Sprintf("%s/%s", manifestLink, miradorLink)})
 	}
 
@@ -378,7 +378,7 @@ func (s *TranscriptionStore) createReadme() string {
 	tmpl := template.Must(template.New("README.md").Parse(readmeTemplate))
 	tmpl.Execute(&out, map[string]string{
 		"numLines":    strconv.Itoa(numLinesTotal),
-		"numWorks":    strconv.Itoa(len(transcriptions)),
+		"numWorks":    strconv.Itoa(len(documents)),
 		"numYears":    strconv.Itoa(len(years)),
 		"decadeTable": decadesTable.String(),
 		"yearTable":   yearsTable.String(),

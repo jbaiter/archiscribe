@@ -17,7 +17,7 @@ import (
 )
 
 var taskChan = make(chan lib.TaskDefinition)
-var store *lib.TranscriptionStore
+var store *lib.DocumentStore
 
 // APIError is for errors that are returned via the API
 type APIError struct {
@@ -35,8 +35,8 @@ func writeAPIError(err error, code int, w http.ResponseWriter) {
 	w.Write(out)
 }
 
-// SubmitTranscription handles user-submitted transcriptions
-func SubmitTranscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// SubmitDocument handles user-submitted documents
+func SubmitDocument(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var task lib.TaskDefinition
 	err := json.NewDecoder(r.Body).Decode(&task)
 	task.ResultChan = make(chan lib.SubmitResult)
@@ -44,14 +44,14 @@ func SubmitTranscription(w http.ResponseWriter, r *http.Request, ps httprouter.P
 	if r.Method == "POST" {
 		log.Printf(
 			"Received %d transcriptions for %s",
-			len(task.Transcription.Lines), task.Transcription.Identifier)
+			len(task.Document.Lines), task.Document.Identifier)
 	} else {
-		log.Printf("Received update for %s", task.Transcription.Identifier)
+		log.Printf("Received update for %s", task.Document.Identifier)
 	}
 	if err != nil {
 		writeAPIError(err, 500, w)
 	} else {
-		stored, err := store.Save(task.Transcription, task.Author, task.Email, task.Comment)
+		stored, err := store.Save(task.Document, task.Author, task.Email, task.Comment)
 		if err != nil {
 			writeAPIError(err, 500, w)
 			return
@@ -76,10 +76,10 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 	}
 }
 
-// ListTranscriptions returns a list of all transcriptions
-func ListTranscriptions(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	transcriptions := store.List()
-	raw, err := json.Marshal(transcriptions)
+// ListDocuments returns a list of all documents
+func ListDocuments(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	documents := store.List()
+	raw, err := json.Marshal(documents)
 	if err != nil {
 		log.Printf("%+v\n", err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -89,14 +89,14 @@ func ListTranscriptions(resp http.ResponseWriter, req *http.Request, ps httprout
 	}
 }
 
-// GetTranscription returns a single transcription
-func GetTranscription(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	trans := store.Details(ps.ByName("ident"))
+// GetDocument returns a single document
+func GetDocument(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	doc := store.Details(ps.ByName("ident"))
 	log.Printf("Getting %s", ps.ByName("ident"))
-	raw, err := json.Marshal(trans)
+	raw, err := json.Marshal(doc)
 	if err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)
-	} else if trans.Identifier == "" {
+	} else if doc.Identifier == "" {
 		resp.WriteHeader(http.StatusNotFound)
 	} else {
 		resp.Header().Add("Content-Type", "application/json")
@@ -121,7 +121,7 @@ func addPrefix(prefix string, h http.Handler) http.Handler {
 
 // Serve the web application
 func Serve(port int, repoPath string) {
-	s, err := lib.NewTranscriptionStore(repoPath)
+	s, err := lib.NewDocumentStore(repoPath)
 	if err != nil {
 		panic(err)
 	}
@@ -133,10 +133,10 @@ func Serve(port int, repoPath string) {
 		w.Write(box.Bytes("index.html"))
 	})
 	router.GET("/api/lines/:year", ProduceLines)
-	router.GET("/api/transcriptions", ListTranscriptions)
-	router.POST("/api/transcriptions", SubmitTranscription)
-	router.GET("/api/transcriptions/:ident", GetTranscription)
-	router.PUT("/api/transcriptions/:ident", SubmitTranscription)
+	router.GET("/api/documents", ListDocuments)
+	router.POST("/api/documents", SubmitDocument)
+	router.GET("/api/documents/:ident", GetDocument)
+	router.PUT("/api/documents/:ident", SubmitDocument)
 
 	// NOTE: This is a bit clumsy, since Box.Open does not return an error
 	// that is recognized by os.IsNotExit, which is why we have to pass

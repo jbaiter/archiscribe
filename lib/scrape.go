@@ -250,7 +250,8 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 				lines[len(lines)-1].NextImageURL = iiifURL
 			}
 			l := OCRLine{
-				ImageURL: iiifURL,
+				Identifier: Sha1Digest([]byte(iiifURL)),
+				ImageURL:   iiifURL,
 			}
 			if len(lines) > 0 {
 				l.PreviousImageURL = lines[len(lines)-1].ImageURL
