@@ -4,16 +4,38 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var commitPat = regexp.MustCompile(`^\[(.+) ([0-9a-f]+)\] (.+)\n`)
+var logEscapePat = regexp.MustCompile(`\s*\"(.*?)\"\s*[,}:]`)
+
+// LogEntry encodes a git log entry
+type LogEntry struct {
+	Author struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	} `json:"author"`
+	Date    time.Time `json:"date"`
+	Commit  string    `json:"commit"`
+	Subject string    `json:"subject"`
+	Body    string    `json:"body,omitempty"`
+}
+
+// FileStatus encodes the status of a file
+type FileStatus rune
+
+// Status constants from git diff output
+const (
+	StatusModified FileStatus = 'M'
+	StatusAdded    FileStatus = 'A'
+	StatusDeleted  FileStatus = 'D'
+)
 
 // GitRepo represents a Git repository
 type GitRepo struct {
@@ -64,20 +86,43 @@ func (r *GitRepo) Pull(remote string, branch string, rebase bool) error {
 	return nil
 }
 
-// Add stages a new file
-func (r *GitRepo) Add(path string) error {
-	defer r.resetCmd()
+func (r *GitRepo) adjustPath(path string) (string, error) {
 	if strings.HasPrefix(path, "/") {
 		newPath, errr := filepath.Rel(r.cmd.Dir, path)
 		if errr != nil {
-			return errr
+			return "", errr
 		} else if strings.HasPrefix(newPath, "../") {
-			return fmt.Errorf(
+			return "", fmt.Errorf(
 				"Path must be relative to repository root (%s)", r.cmd.Dir)
 		}
-		path = newPath
+		return newPath, nil
 	}
-	r.cmd.Args = append(r.cmd.Args, "add", path)
+	return path, nil
+}
+
+// Add stages a new file
+func (r *GitRepo) Add(path string) error {
+	defer r.resetCmd()
+	p, err := r.adjustPath(path)
+	if err != nil {
+		return err
+	}
+	r.cmd.Args = append(r.cmd.Args, "add", p)
+	stdout, stderr, err := r.run()
+	if err != nil {
+		return fmt.Errorf("%+v\n%q\n%q", err, stdout, stderr)
+	}
+	return nil
+}
+
+// Remove removes a file
+func (r *GitRepo) Remove(path string) error {
+	defer r.resetCmd()
+	p, err := r.adjustPath(path)
+	if err != nil {
+		return err
+	}
+	r.cmd.Args = append(r.cmd.Args, "rm", "-rf", p)
 	stdout, stderr, err := r.run()
 	if err != nil {
 		return fmt.Errorf("%+v\n%q\n%q", err, stdout, stderr)
@@ -86,12 +131,13 @@ func (r *GitRepo) Add(path string) error {
 }
 
 // Commit the staged changes
-func (r *GitRepo) Commit(message string, author string) (string, error) {
+func (r *GitRepo) Commit(message string, author string, email string) (string, error) {
 	defer r.resetCmd()
 	r.cmd.Args = append(
 		r.cmd.Args, "commit", "-m", message)
 	if author != "" {
-		r.cmd.Args = append(r.cmd.Args, "--author", author)
+		r.cmd.Args = append(
+			r.cmd.Args, "--author", fmt.Sprintf("%s <%s>", author, email))
 	}
 	stdout, stderr, err := r.run()
 	if err != nil {
@@ -114,8 +160,12 @@ func (r *GitRepo) Push(remote string, branch string) error {
 
 // CleanUp residual modifications
 func (r *GitRepo) CleanUp() error {
-	defer r.resetCmd()
 	r.cmd.Args = append(r.cmd.Args, "reset")
+	if stdout, stderr, err := r.run(); err != nil {
+		return fmt.Errorf("%q\n%q", stdout, stderr)
+	}
+	r.resetCmd()
+	r.cmd.Args = append(r.cmd.Args, "checkout", "--", ".")
 	if stdout, stderr, err := r.run(); err != nil {
 		return fmt.Errorf("%q\n%q", stdout, stderr)
 	}
@@ -124,127 +174,69 @@ func (r *GitRepo) CleanUp() error {
 	if stdout, stderr, err := r.run(); err != nil {
 		return fmt.Errorf("%q\n%q", stdout, stderr)
 	}
+	r.resetCmd()
 	return nil
 }
 
-func writeLineData(volumeIdent string, basePath string, line OCRLine, repo *GitRepo) (string, string, error) {
-	lineID := MakeLineIdentifier(volumeIdent, line)
-	cachedPath := LineCache.GetLinePath(lineID)
-	if cachedPath == "" {
-		path, err := LineCache.CacheLine(line.ImageURL, lineID)
-		if err != nil {
-			return "", "", err
+// Diff lists modified files
+func (r *GitRepo) Diff(cached bool) (map[string]FileStatus, error) {
+	defer r.resetCmd()
+	r.cmd.Args = append(
+		r.cmd.Args, "diff", "--name-status")
+	if cached {
+		r.cmd.Args = append(r.cmd.Args, "--cached")
+	}
+	stdout, stderr, err := r.run()
+	if err != nil {
+		return nil, fmt.Errorf("%q\n%q", stdout, stderr)
+	}
+	out := make(map[string]FileStatus)
+	for _, line := range strings.Split(stdout, "\n") {
+		if line == "" {
+			continue
 		}
-		cachedPath = path
+		parts := strings.Split(line, "\t")
+		if strings.Index("AMD", parts[0]) == -1 {
+			// Unknown status, skipping
+			continue
+		}
+		out[parts[1]] = FileStatus([]rune(parts[0])[0])
 	}
-
-	// Move line image from cache into repository
-	imgPath := filepath.Join(basePath, lineID+".png")
-	in, err := os.Open(cachedPath)
-	if err != nil {
-		return "", "", err
-	}
-	out, err := os.Create(imgPath)
-	if err != nil {
-		return "", "", err
-	}
-	io.Copy(out, in)
-	in.Close()
-	out.Close()
-	if err := os.Remove(cachedPath); err != nil {
-		return "", "", err
-	}
-	if err := repo.Add(imgPath); err != nil {
-		return "", "", err
-	}
-
-	// Write transcription
-	transPath := filepath.Join(basePath, lineID+".txt")
-	transOut, err := os.Create(transPath)
-	if err != nil {
-		return "", "", err
-	}
-	if _, err = transOut.WriteString(line.Transcription + "\n"); err != nil {
-		return "", "", err
-	}
-	transOut.Close()
-	if err := repo.Add(transPath); err != nil {
-		return "", "", err
-	}
-	return imgPath, Sha1Digest([]byte(line.ImageURL)), nil
+	return out, nil
 }
 
-// GitWatcher TODO
-// TODO: Progress channel?
-func GitWatcher(repoPath string, taskChan chan TaskDefinition) {
-	log.Printf("Launched GitWatcher")
-	repo, _ := GitOpen(repoPath)
-outer:
-	for {
-		task, more := <-taskChan
-		if !more {
-			return
-		}
-		log.Printf("Committing transcriptions...")
-		if err := repo.CleanUp(); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue
-		}
-		if err := repo.Pull("origin", "master", true); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue
-		}
-		ident := task.Identifier
-		yearPath := filepath.Join(
-			repoPath, "transcriptions", task.Metadata.Get("year").MustString())
-		os.MkdirAll(yearPath, 0755)
-		lineMapping := make(map[string]string)
-		for _, line := range task.Lines {
-			if line.Transcription == "" {
-				continue
-			}
-			_, lineHash, err := writeLineData(ident, yearPath, line, repo)
-			if err != nil {
-				task.ResultChan <- SubmitResult{Error: err}
-				continue outer
-			}
-			lineMapping[lineHash] = line.ImageURL
-		}
-		if err := LineCache.PurgeLines(ident); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue outer
-		}
-		task.Metadata.Set("lines", lineMapping)
-		metaPath := filepath.Join(yearPath, ident+".json")
-		metaOut, _ := os.Create(metaPath)
-		json.NewEncoder(metaOut).Encode(task.Metadata)
-		metaOut.Close()
-		if err := repo.Add(metaPath); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue
-		}
-		readme := createReadme(repoPath)
-		readmePath := filepath.Join(repoPath, "README.md")
-		readmeOut, _ := os.Create(readmePath)
-		readmeOut.WriteString(readme)
-		readmeOut.Close()
-		if err := repo.Add(readmePath); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue
-		}
-		commitMessage := fmt.Sprintf(
-			"Transcribed %d lines from %s (%s)", len(task.Lines), task.Identifier,
-			task.Metadata.Get("year").MustString())
-		if task.Comment != "" {
-			commitMessage += ("\n" + task.Comment)
-		}
-		if commitHash, err := repo.Commit(commitMessage, task.Author); err != nil {
-			task.ResultChan <- SubmitResult{Error: err}
-			continue
-		} else {
-			res := SubmitResult{CommitSha: commitHash}
-			task.ResultChan <- res
-		}
-		repo.Push("origin", "master")
+// Log returns the git log of a given file
+func (r *GitRepo) Log(fpaths ...string) ([]LogEntry, error) {
+	defer r.resetCmd()
+	r.cmd.Args = append(
+		r.cmd.Args, "log", `--pretty=format:{"commit":"%H","subject":"%s","body":"%b","author": {"name":"%aN","email":"%aE"},"date":"%aI"}`)
+	if len(fpaths) > 0 {
+		r.cmd.Args = append(r.cmd.Args, fpaths...)
 	}
+	stdout, stderr, err := r.run()
+	if err != nil {
+		return nil, fmt.Errorf("%q\n%q", stdout, stderr)
+	}
+	// Escape double quotes inside of values
+	cleanedLog := logEscapePat.ReplaceAllStringFunc(stdout, func(match string) string {
+		start := strings.Index(match, `"`)
+		end := strings.LastIndex(match, `"`)
+		escaped := strings.Replace(string(match[start+1:end]), `"`, `\"`, -1)
+		escaped = strings.Replace(escaped, `\n`, `\\n`, -1)
+		return match[:start+1] + escaped + match[end:]
+	})
+	logJsons := strings.Split(cleanedLog, "\n")
+	logEntries := make([]LogEntry, 0, len(logJsons))
+	for _, entryJSON := range logJsons {
+		if entryJSON == "" {
+			continue
+		}
+		var entry LogEntry
+		if err := json.Unmarshal([]byte(entryJSON), &entry); err != nil {
+			log.Printf("%#v", entryJSON)
+			return nil, err
+		}
+		logEntries = append(logEntries, entry)
+	}
+	return logEntries, nil
 }

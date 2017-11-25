@@ -52,6 +52,7 @@ var LineCache *LineImageCache
 
 // OCRLine contains information about an OCR line
 type OCRLine struct {
+	Identifier       string `json:"id"`
 	ImageURL         string `json:"line"`
 	PreviousImageURL string `json:"previous,omitempty"`
 	NextImageURL     string `json:"next,omitempty"`
@@ -60,18 +61,17 @@ type OCRLine struct {
 
 // TaskDefinition encodes a finished transcription along with author information
 type TaskDefinition struct {
-	Identifier string            `json:"id"`
-	Lines      []OCRLine         `json:"lines"`
-	Author     string            `json:"author,omitempty"`
-	Comment    string            `json:"comment,omitempty"`
-	Metadata   *simplejson.Json  `json:"metadata"`
-	ResultChan chan SubmitResult `json:"-"`
+	Transcription Transcription     `json:"transcription"`
+	Author        string            `json:"author,omitempty"`
+	Email         string            `json:"email,omitempty"`
+	Comment       string            `json:"comment,omitempty"`
+	ResultChan    chan SubmitResult `json:"-"`
 }
 
 // SubmitResult holds the result of a submission
 type SubmitResult struct {
-	CommitSha string `json:"commit,omitempty"`
-	Error     error  `json:"error,omitempty"`
+	Transcription Transcription
+	Error         error
 }
 
 // ProgressReader wraps another reader and exposes progress information

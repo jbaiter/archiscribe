@@ -17,27 +17,48 @@ import (
 )
 
 var taskChan = make(chan lib.TaskDefinition)
+var store *lib.TranscriptionStore
+
+// APIError is for errors that are returned via the API
+type APIError struct {
+	Err  error `json:"error"`
+	Code int   `json:"code"`
+}
+
+func writeAPIError(err error, code int, w http.ResponseWriter) {
+	apiErr := APIError{
+		Err:  err,
+		Code: code}
+	out, _ := json.MarshalIndent(apiErr, "", "  ")
+	w.WriteHeader(code)
+	w.Header().Add("Content-Type", "application/json")
+	w.Write(out)
+}
 
 // SubmitTranscription handles user-submitted transcriptions
-func SubmitTranscription(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func SubmitTranscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var task lib.TaskDefinition
 	err := json.NewDecoder(r.Body).Decode(&task)
 	task.ResultChan = make(chan lib.SubmitResult)
 	defer close(task.ResultChan)
-	log.Printf("Received %d transcriptions for %s", len(task.Lines), task.Identifier)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("%+v", err)))
+	if r.Method == "POST" {
+		log.Printf(
+			"Received %d transcriptions for %s",
+			len(task.Transcription.Lines), task.Transcription.Identifier)
 	} else {
-		taskChan <- task
-		result := <-task.ResultChan
-		js, _ := json.Marshal(result)
-		w.Header().Add("Content-Type", "application/json")
-		if result.Error != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		} else {
-			w.WriteHeader(http.StatusOK)
+		log.Printf("Received update for %s", task.Transcription.Identifier)
+	}
+	if err != nil {
+		writeAPIError(err, 500, w)
+	} else {
+		stored, err := store.Save(task.Transcription, task.Author, task.Email, task.Comment)
+		if err != nil {
+			writeAPIError(err, 500, w)
+			return
 		}
+		js, _ := json.MarshalIndent(stored, "", "  ")
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Content-Type", "application/json")
 		w.Write(js)
 	}
 }
@@ -52,6 +73,34 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 		resp.WriteHeader(http.StatusInternalServerError)
 	} else {
 		lineProd.produceLines()
+	}
+}
+
+// ListTranscriptions returns a list of all transcriptions
+func ListTranscriptions(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	transcriptions := store.List()
+	raw, err := json.Marshal(transcriptions)
+	if err != nil {
+		log.Printf("%+v\n", err)
+		resp.WriteHeader(http.StatusInternalServerError)
+	} else {
+		resp.Header().Add("Content-Type", "application/json")
+		resp.Write(raw)
+	}
+}
+
+// GetTranscription returns a single transcription
+func GetTranscription(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	trans := store.Details(ps.ByName("ident"))
+	log.Printf("Getting %s", ps.ByName("ident"))
+	raw, err := json.Marshal(trans)
+	if err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+	} else if trans.Identifier == "" {
+		resp.WriteHeader(http.StatusNotFound)
+	} else {
+		resp.Header().Add("Content-Type", "application/json")
+		resp.Write(raw)
 	}
 }
 
@@ -72,6 +121,11 @@ func addPrefix(prefix string, h http.Handler) http.Handler {
 
 // Serve the web application
 func Serve(port int, repoPath string) {
+	s, err := lib.NewTranscriptionStore(repoPath)
+	if err != nil {
+		panic(err)
+	}
+	store = s
 	box := packr.NewBox("../client/dist")
 
 	router := httprouter.New()
@@ -79,7 +133,10 @@ func Serve(port int, repoPath string) {
 		w.Write(box.Bytes("index.html"))
 	})
 	router.GET("/api/lines/:year", ProduceLines)
+	router.GET("/api/transcriptions", ListTranscriptions)
 	router.POST("/api/transcriptions", SubmitTranscription)
+	router.GET("/api/transcriptions/:ident", GetTranscription)
+	router.PUT("/api/transcriptions/:ident", SubmitTranscription)
 
 	// NOTE: This is a bit clumsy, since Box.Open does not return an error
 	// that is recognized by os.IsNotExit, which is why we have to pass
@@ -96,9 +153,6 @@ func Serve(port int, repoPath string) {
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}
-
-	go lib.GitWatcher(repoPath, taskChan)
-
 	fmt.Printf("Serving on port %d\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }
