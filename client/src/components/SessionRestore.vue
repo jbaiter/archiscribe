@@ -16,7 +16,7 @@
       <b-icon icon="restore" /><span>Wiederherstellen</span>
     </a>
     <a class="button is-danger" @click="discardSession(true)">
-      <b-icon icon="delete_forever" /><span>Verwerfen</span>
+      <b-icon icon="delete-forever" /><span>Verwerfen</span>
     </a>
   </div>
 </template>

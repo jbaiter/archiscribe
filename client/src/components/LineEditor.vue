@@ -3,7 +3,7 @@
   <form class="transcription-widget" @submit.prevent="onNext">
     <a class="toggle-ctx previous" v-if="line.previous && !showPrevious"
         title="Mehr Kontext" @click="togglePrevious">
-        <b-icon icon="more_horiz" />
+        <b-icon icon="dots-horizontal" />
       </a>
     <line-image v-if="showPrevious" @click="togglePrevious"
                 type="previous" :image-src="line.previous" />
@@ -12,7 +12,7 @@
                 @click="toggleNext" />
     <a class="toggle-ctx next" v-if="line.next && !showNext"
         title="Mehr Kontext" @click="toggleNext">
-        <b-icon icon="more_horiz" />
+        <b-icon icon="dots-horizontal" />
     </a>
     <b-field>
       <div class="control is-clearfix is-expanded">
@@ -24,7 +24,7 @@
         <b-icon icon="undo" />
       </a>
       <button class="button is-success done-btn" title="Nächste Zeile" type="submit">
-        <b-icon icon="done" />
+        <b-icon icon="check" />
       </button>
       <a class="button is-danger delete-btn" @click="discardLine(currentLineIdx)"
           title="Zeile verwerfen">

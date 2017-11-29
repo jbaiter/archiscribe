@@ -17,7 +17,7 @@
           </div>
           <a class="button focus-btn" @click="zoomLine(idx)"
               title="Detailansicht">
-            <b-icon icon="search" />
+            <b-icon icon="magnify" />
           </a>
           <a class="button is-danger delete-btn" @click="discardLine(idx)"
               title="Zeile verwerfen">

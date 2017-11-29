@@ -24,7 +24,7 @@
             <input type="checkbox" v-model="showHelp" />
             <span class="check" />
             <span class="switch-right">
-              <b-icon icon="help" :type="showHelp ? 'is-primary' : 'is-black'"/>
+              <b-icon icon="help-circle" :type="showHelp ? 'is-primary' : 'is-black'"/>
             </span>
           </label>
         </div>
@@ -73,9 +73,9 @@ export default {
   computed: {
     toggleBottomIcon () {
       if (this.bottomIsHidden) {
-        return 'expand_less'
+        return 'chevron-up'
       } else {
-        return 'expand_more'
+        return 'chevron-down'
       }
     },
     toggleBottomTitle () {

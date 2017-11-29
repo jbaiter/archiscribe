@@ -7,7 +7,7 @@
                  :disabled="isLoadingLines" expanded />
         <button class="button is-info" @click="randomizeYear"
                 title="Zufälliges Jahr" type="button" :disabled="isLoadingLines">
-          <b-icon icon="casino" />
+          <b-icon icon="dice-4" />
         </button>
       </b-field>
     </b-field>

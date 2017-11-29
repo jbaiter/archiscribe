@@ -1,10 +1,10 @@
 <template>
   <b-field grouped class="is-pulled-right">
     <a class="button" @click="showSingle" title="Detailansicht">
-      <b-icon icon="search" />
+      <b-icon icon="magnify" />
     </a>
     <a class="button" @click="showMulti" title="Zeilenübersicht">
-      <b-icon icon="format_align_left" />
+      <b-icon icon="format-align-left" />
     </a>
     <a class="button" @click="pickAnother" title="Anderes Buch auswählen">
       <b-icon icon="autorenew" />
