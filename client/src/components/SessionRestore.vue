@@ -2,15 +2,21 @@
   <!-- TODO: Information about title, year, number of transcribed lines -->
   <div class="column is-half is-offset-one-quarter">
     <h1 class="title">Sitzung wiederherstellen?</h1>
-    <p>
+    <p v-if="previousSession.activeDocument.history">
+    In einer vergangenen Sitzung wurde ein Review von
+    <strong><a :href="`https://archive.org/details/${previousSession.activeDocument.id}`">
+        {{ previousSession.activeDocument.title }} ({{ previousSession.activeDocument.year }})
+      </a></strong><span> </span>angefangen und nicht abgeschlossen.
+    </p>
+    <p v-else>
     In einer vergangenen Sitzung wurden <strong>{{ numTranscribedLines }}</strong> Zeilen aus
-    <strong><a :href="`https://archive.org/details/${previousSession.document.id}`">
-        {{ previousSession.document.title }} ({{ previousSession.document.year }})
+    <strong><a :href="`https://archive.org/details/${previousSession.activeDocument.id}`">
+        {{ previousSession.activeDocument.title }} ({{ previousSession.activeDocument.year }})
       </a></strong><span> </span>transkribiert und nicht abgeschickt.
     </p>
     <p>
     Wollen Sie diese Sitzung <strong>wiederherstellen und fortsetzen?</strong> Wenn Sie die
-    Sitzung <strong>verwerfen</strong> werden ihre bisherigen Transkriptionen <strong>unwiderruflich gelöscht</strong>.
+    Sitzung <strong>verwerfen</strong> werden ihre Änderungen <strong>unwiderruflich gelöscht</strong>.
     </p>
     <a class="button is-success" @click="restoreSession">
       <b-icon icon="restore" /><span>Wiederherstellen</span>

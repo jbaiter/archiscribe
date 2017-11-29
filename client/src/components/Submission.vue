@@ -1,6 +1,6 @@
 <template>
   <div class="column is-half is-offset-one-quarter">
-    <div class="box">
+    <div class="box" v-if="!isReview">
       <p>
       Sie haben <strong>{{ numTranscriptions }}</strong> von
       <strong>{{ lines.length }}</strong> Zeilen transkribiert.
@@ -12,7 +12,7 @@
       <a :href="githubUrl">{{ githubUrl }}</a>
       </p>
       <button class="button" type="submit">
-        Weiter transkribieren
+        Weiter {{ isReview ? 'reviewen' : 'transkribieren' }}
       </button>
     </form>
     <form v-if="numTranscriptions > 0 && !githubUrl"
@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 
 export default {
   name: 'Submission',
@@ -66,7 +66,8 @@ export default {
       }
       return num
     },
-    ...mapState(['lines', 'author', 'email', 'comment', 'commit', 'isSubmitting'])
+    ...mapState(['lines', 'author', 'email', 'comment', 'commit', 'isSubmitting']),
+    ...mapGetters(['isReview'])
   },
   watch: {
     anonymous (val) {

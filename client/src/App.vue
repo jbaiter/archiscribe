@@ -1,8 +1,16 @@
 <template>
   <div id="app" class="container is-widescreen">
     <section class="header" v-if="showToolbar">
-      <h1><a :href="`https://archive.org/details/${document.id}`">{{ truncatedTitle }}</a> ({{document.year}})</h1>
-      <toolbar />
+      <div class="columns">
+        <div class="column is-four-fifths">
+          <h1>
+            <b-icon v-if="isReview" icon="message-draw" type="is-info" title="Review Modus"/>
+            <a :href="`https://archive.org/details/${activeDocument.id}`">{{ truncatedTitle }}</a> ({{activeDocument.year}})</h1>
+        </div>
+        <div class="column">
+          <toolbar />
+        </div>
+      </div>
       <progress-bar v-if="showProgress"
                     :max="lines.length" :current="currentLineIdx"/>
     </section>
@@ -36,8 +44,7 @@
 </template>
 
 <script>
-import axios from 'axios'
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 import bus from './eventBus'
 import SessionRestore from './components/SessionRestore'
@@ -49,6 +56,7 @@ import ProgressBar from './components/ProgressBar'
 import LineEditor from './components/LineEditor'
 import MultiLineEditor from './components/MultiLineEditor'
 import Submission from './components/Submission'
+import DocumentList from './components/DocumentList'
 
 export default {
   name: 'app',
@@ -61,7 +69,8 @@ export default {
     'multi': MultiLineEditor,
     'config': Setup,
     'submit': Submission,
-    'restore': SessionRestore
+    'restore': SessionRestore,
+    'list': DocumentList
   },
   data () {
     return {
@@ -86,15 +95,15 @@ export default {
       }
     },
     truncatedTitle () {
-      let cut = this.document.title.indexOf(' ', 96)
-      if (cut === -1) return this.document.title
-      return this.document.title.substring(0, cut) + '‥'
+      let cut = this.activeDocument.title.indexOf(' ', 96)
+      if (cut === -1) return this.activeDocument.title
+      return this.activeDocument.title.substring(0, cut) + '‥'
     },
     showFooter () {
       return ['multi', 'single'].includes(this.currentScreen)
     },
     showToolbar () {
-      return !['config', 'restore'].includes(this.currentScreen)
+      return !['config', 'restore', 'list'].includes(this.currentScreen)
     },
     showProgress () {
       return this.currentScreen === 'single'
@@ -102,7 +111,8 @@ export default {
     showKeyboard () {
       return !this.showHelp && this.showBottom
     },
-    ...mapState(['currentScreen', 'lines', 'document', 'currentLineIdx'])
+    ...mapState(['currentScreen', 'lines', 'activeDocument', 'currentLineIdx']),
+    ...mapGetters(['isReview'])
   },
   watch: {
     showFooter (val) {
@@ -135,32 +145,10 @@ export default {
       this.lines.splice(this.currentLineIdx, 1)
       this.onChangeLine(this.currentLineIdx + 1)
     },
-    onSubmit (email, name, comment) {
-      localStorage.setItem(
-        'identity',
-        JSON.stringify({email, name, anonymous: (!name && !email)}))
-      let data = {
-        document: this.document,
-        lines: this.lines.filter((l) => l.transcription !== '')
-      }
-      if (email && name) {
-        data['author'] = {email, name}
-      }
-      if (comment) {
-        data['commitMessage'] = comment
-      }
-      axios.post(
-        '/api/transcriptions', data
-      ).then((resp) => {
-        bus.$emit('submission-success', resp.data.github)
-        localStorage.clear('state')
-      })
-      bus.$emit('submission-pending')
-    },
     onContinue: function () {
       this.isLoading = false
       this.lines = []
-      this.document = null
+      this.activeDocument = null
       this.currentLineIdx = -1
       this.selectedYear = null
       this.currentScreen = 'config'

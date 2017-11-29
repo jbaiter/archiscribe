@@ -6,7 +6,10 @@
     <a class="button" @click="showMulti" title="Zeilenübersicht">
       <b-icon icon="format-align-left" />
     </a>
-    <a class="button" @click="pickAnother" title="Anderes Buch auswählen">
+    <a v-if="isReview" class="button is-danger" @click="backToList" title="Zurück zur Übersicht">
+      <b-icon icon="replay" />
+    </a>
+    <a v-else class="button is-danger" @click="pickAnother" title="Anderes Buch auswählen">
       <b-icon icon="autorenew" />
     </a>
     <a class="button is-success" @click="submit" title="Transkriptionen abschicken">
@@ -16,12 +19,13 @@
 </template>
 
 <script>
-import { mapActions, mapMutations, mapState } from 'vuex'
+import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 
 export default {
   name: 'Toolbar',
   computed: {
-    ...mapState(['metadata'])
+    ...mapState(['activeDocument']),
+    ...mapGetters(['isReview'])
   },
   methods: {
     pickAnother () {
@@ -36,6 +40,9 @@ export default {
     },
     submit () {
       this.changeScreen('submit')
+    },
+    backToList () {
+      this.changeScreen('list')
     },
     ...mapMutations(['changeScreen']),
     ...mapActions(['fetchLines'])

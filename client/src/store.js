@@ -7,13 +7,13 @@ import { getRandomInt, preloadLineImages } from './util'
 
 Vue.use(Vuex)
 let storedSession = JSON.parse(localStorage.getItem('session'))
-if (storedSession && !storedSession.document) {
+if (storedSession && !storedSession.activeDocument) {
   if (!storedSession.metadata) {
     localStorage.removeItem('session')
     storedSession = null
   } else {
     // Migrate from old format
-    storedSession.document = {
+    storedSession.activeDocument = {
       id: storedSession.metadata.id,
       title: storedSession.metadata.title,
       year: storedSession.year,
@@ -33,13 +33,17 @@ let store = new Vuex.Store({
     isLoadingLines: false,
     loadingProgress: undefined,
     lines: [],
-    document: undefined,
+    allDocuments: [],
+    activeDocument: undefined,
     currentLineIdx: -1,
     isSubmitting: false,
     author: localStorage.getItem('identity.author'),
     email: localStorage.getItem('identity.email'),
     comment: null,
     commit: null
+  },
+  getters: {
+    isReview: state => state.activeDocument && state.activeDocument.history !== undefined
   },
   mutations: {
     discardSession (state, restart) {
@@ -59,10 +63,11 @@ let store = new Vuex.Store({
       state.isLoadingLines = true
     },
     stopLoading (state) {
+      state.loadingProgress = undefined
       state.isLoadingLines = false
     },
-    setDocument (state, document) {
-      state.document = document
+    setActiveDocument (state, document) {
+      state.activeDocument = document
     },
     updateProgress (state, progress) {
       state.loadingProgress = progress
@@ -96,12 +101,8 @@ let store = new Vuex.Store({
       state.currentScreen = screen
     },
     setLines (state, lines) {
-      this.commit('stopLoading')
-      this.state.loadingProgress = undefined
       state.lines = lines
-      this.commit('changeLine', 0)
-      this.commit('changeScreen', 'single')
-      preloadLineImages(this.state.lines.map(l => l.line))
+      preloadLineImages(state.lines.map(l => l.line))
     },
     setYear (state, year) {
       state.year = year
@@ -135,14 +136,22 @@ let store = new Vuex.Store({
     setCommitHash (state, hash) {
       state.commit = hash
     },
+    receiveDocuments (state, docs) {
+      state.allDocuments = docs
+    },
     resetWorkflow (state) {
-      state.year = getRandomInt(1800, 1900)
-      state.lines = []
-      state.currentLineIdx = -1
-      state.document = null
-      state.currentScreen = 'config'
+      let isReview = this.getters.isReview
+      state.activeDocument = null
       state.commit = null
       state.comment = null
+      state.lines = []
+      state.currentLineIdx = -1
+      if (isReview) {
+        state.currentScreen = 'list'
+      } else {
+        state.year = getRandomInt(1800, 1900)
+        state.currentScreen = 'config'
+      }
     },
     updateEmail (state, email) {
       state.email = email
@@ -157,31 +166,50 @@ let store = new Vuex.Store({
     }
   },
   actions: {
+    fetchDocuments ({ commit, state }) {
+      axios.get('/api/documents')
+        .then(({ data }) => commit('receiveDocuments', data))
+    },
+    fetchDocumentLines ({ commit, state }, ident) {
+      axios.get('/api/documents/' + ident)
+        .then(({ data }) => commit('setLines', data.lines))
+    },
     fetchLines ({ commit, state }) {
       commit('startLoading')
       const eventSource = new EventSource(`/api/lines/${state.year}?taskSize=${state.taskSize}`)
       eventSource.addEventListener(
-        'document', (evt) => commit('setDocument', JSON.parse(evt.data)))
+        'document', (evt) => commit('setActiveDocument', JSON.parse(evt.data)))
       eventSource.addEventListener(
         'progress', (evt) => commit('updateProgress', JSON.parse(evt.data)))
       eventSource.addEventListener('lines', (evt) => {
+        commit('stopLoading')
         commit('setLines', JSON.parse(evt.data).map(
           (line) => ({...line, transcription: ''})))
+        commit('changeLine', 0)
+        commit('changeScreen', 'single')
         eventSource.close()
       })
     },
     submit ({ commit, state }) {
       commit('startSubmit')
-      axios.post('/api/documents', {
+      let args = {
         document: {
           lines: state.lines.filter(l => l.transcription),
-          ...this.state.document
+          ...this.state.activeDocument
         },
         author: state.author ? `${state.author} <${state.email}>` : null,
         comment: state.comment
-      }).then(({ data }) => {
+      }
+      let resp
+      if (this.getters.isReview) {
+        args.document.reviewed = true
+        resp = axios.put('/api/documents/' + this.state.activeDocument.id, args)
+      } else {
+        resp = axios.post('/api/documents', args)
+      }
+      resp.then(({ data }) => {
         commit('finishSubmit')
-        commit('setCommitHash', data.commit)
+        commit('setCommitHash', data.history[0].commit)
         commit('discardSession', false)
       })
       // TODO: Handle error
@@ -193,9 +221,12 @@ store.subscribe((mutation, state) => {
   if (!['updateTranscription', 'setLines'].includes(mutation.type)) {
     return
   }
-  let { year, taskSize, lines, document, currentLineIdx } = state
+  let { year, taskSize, lines, activeDocument, currentLineIdx } = state
+  if (currentLineIdx < 0) {
+    currentLineIdx = 0
+  }
   localStorage.setItem('session', JSON.stringify({
-    year, taskSize, lines, document, currentLineIdx }))
+    year, taskSize, lines, activeDocument, currentLineIdx }))
 })
 
 export default store

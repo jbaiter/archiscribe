@@ -21,6 +21,7 @@
     </button>
     <progress-bar v-if="percentDone" max="100" :current="percentDone" />
   </form>
+  <a class="start-review" @click="changeScreen('list')">Bisherige Transkriptionen anzeigen</a>
   </div>
 </template>
 
@@ -54,7 +55,7 @@ export default {
     ])
   },
   methods: {
-    ...mapMutations(['randomizeYear']),
+    ...mapMutations(['randomizeYear', 'changeScreen']),
     ...mapActions(['fetchLines'])
   }
 }

@@ -32,6 +32,7 @@ type Document struct {
 	Lines      []OCRLine  `json:"lines,omitempty"`
 	History    []LogEntry `json:"history,omitempty"`
 	NumLines   int        `json:"numLines,omitempty"`
+	Reviewed   bool       `json:"reviewed"`
 }
 
 var lineNamePat = regexp.MustCompile(`(.+?)_([a-z0-9]{8})`)
@@ -184,6 +185,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 		}
 	}
 	doc.Lines = filtered
+	doc.NumLines = 0
 	if err := LineCache.PurgeLines(ident); err != nil {
 		return nil, err
 	}
@@ -211,7 +213,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 	}
 	var commitMessage string
 	if isUpdate {
-		commitMessage = fmt.Sprintf("Corrected %s (%d)", doc.Identifier, doc.Year)
+		commitMessage = fmt.Sprintf("Reviewed %s (%d)", doc.Identifier, doc.Year)
 		changes, err := s.repo.Diff(true)
 		if err != nil {
 			return nil, err
@@ -232,7 +234,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 			}
 		}
 		if numModified > 0 {
-			commitMessage += fmt.Sprintf(", updated %d", numModified)
+			commitMessage += fmt.Sprintf(", corrected %d", numModified)
 		}
 		if numDeleted > 0 {
 			commitMessage += fmt.Sprintf(", deleted %d", numDeleted)
