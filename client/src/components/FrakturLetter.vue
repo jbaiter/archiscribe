@@ -18,16 +18,8 @@ export default {
 
 <style scoped>
 div {
-  display:inline-block;
-  margin: 0.5em 1.25em;
-  background: none;
-  border-radius: 4px;
+  display: inline-block;
+  backgrournd: none;
   text-align: center;
-}
-
-img {
-  height:40px;
-  color: #000;
-  filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.5));
 }
 </style>

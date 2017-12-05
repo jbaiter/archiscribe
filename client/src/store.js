@@ -23,25 +23,33 @@ if (storedSession && !storedSession.activeDocument) {
   }
 }
 
+let defaultState = {
+  previousSession: storedSession,
+  year: getRandomInt(1800, 1900),
+  taskSize: 50,
+  currentScreen: 'config',
+  isLoadingLines: false,
+  loadingProgress: undefined,
+  lines: [],
+  allDocuments: [],
+  activeDocument: undefined,
+  currentLineIdx: -1,
+  isSubmitting: false,
+  author: localStorage.getItem('identity.author'),
+  email: localStorage.getItem('identity.email'),
+  comment: null,
+  commit: null
+}
+
+if (!localStorage.getItem('hasReadTheGuidelines')) {
+  defaultState.currentScreen = 'intro'
+} else if (storedSession) {
+  defaultState.currentScreen = 'restore'
+}
+
 let store = new Vuex.Store({
   strict: process.env.NODE_ENV !== 'production',
-  state: {
-    previousSession: storedSession,
-    year: getRandomInt(1800, 1900),
-    taskSize: 50,
-    currentScreen: storedSession ? 'restore' : 'config',
-    isLoadingLines: false,
-    loadingProgress: undefined,
-    lines: [],
-    allDocuments: [],
-    activeDocument: undefined,
-    currentLineIdx: -1,
-    isSubmitting: false,
-    author: localStorage.getItem('identity.author'),
-    email: localStorage.getItem('identity.email'),
-    comment: null,
-    commit: null
-  },
+  state: defaultState,
   getters: {
     isReview: state => state.activeDocument && state.activeDocument.history !== undefined
   },

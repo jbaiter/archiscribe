@@ -57,6 +57,7 @@ import LineEditor from './components/LineEditor'
 import MultiLineEditor from './components/MultiLineEditor'
 import Submission from './components/Submission'
 import DocumentList from './components/DocumentList'
+import FirstSteps from './components/FirstSteps'
 
 export default {
   name: 'app',
@@ -65,6 +66,7 @@ export default {
     Keyboard,
     FrakturHelp,
     ProgressBar,
+    'intro': FirstSteps,
     'single': LineEditor,
     'multi': MultiLineEditor,
     'config': Setup,
@@ -103,7 +105,7 @@ export default {
       return ['multi', 'single'].includes(this.currentScreen)
     },
     showToolbar () {
-      return !['config', 'restore', 'list'].includes(this.currentScreen)
+      return ['multi', 'single', 'submit'].includes(this.currentScreen)
     },
     showProgress () {
       return this.currentScreen === 'single'
