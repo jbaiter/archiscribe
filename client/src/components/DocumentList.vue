@@ -1,6 +1,7 @@
 <template>
   <div class="column">
-    <div class="search">
+    <b-loading :active="isLoading" />
+    <div v-if="!isLoading" class="search">
       <b-input placeholder="Filter..." type="search" icon="search"
               v-model="searchQuery" />
       <p v-if="filters">
@@ -11,7 +12,7 @@
       </p>
     </div>
     <b-table
-      v-if="allDocuments"
+      v-if="!isLoading"
       :data="displayedDocuments"
       default-sort-direction="desc"
       default-sort="authoredDate">
@@ -67,6 +68,9 @@ export default {
     }
   },
   computed: {
+    isLoading () {
+      return this.allDocuments.length === 0
+    },
     displayedDocuments () {
       let out = this.allDocuments.map(doc => {
         let viewDoc = {
