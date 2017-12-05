@@ -1,5 +1,5 @@
 <template>
-<section>
+<section class="guidelines">
   <h1 class="title">Wie wird transkribiert?</h1>
   <p>
     Ziel soll es sein einen Bestand an Trainingsdaten aus heterogenen
@@ -164,15 +164,15 @@ img.sample {
   height: 2em;
 }
 
-h2.subtitle {
+.guidelines h2.subtitle {
   margin-top: 2em;
 }
 
-.fraktur-letter {
+.guidelines .fraktur-letter {
   margin: unset;
 }
 
-.fraktur-letter > img {
+.guidelines .fraktur-letter > img {
   height: 1em;
   filter: none;
 }
