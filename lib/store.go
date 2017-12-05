@@ -253,7 +253,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 	if _, err := s.repo.Commit(commitMessage, author, email); err != nil {
 		return nil, err
 	}
-	//s.repo.Push("origin", "master")
+	s.repo.Push("origin", "master")
 	return s.Details(doc.Identifier), nil
 }
 
