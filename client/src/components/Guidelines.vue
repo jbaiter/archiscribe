@@ -168,8 +168,13 @@ h2.subtitle {
   margin-top: 2em;
 }
 
+.fraktur-letter {
+  margin: unset;
+}
+
 .fraktur-letter > img {
   height: 1em;
+  filter: none;
 }
 
 .sample tr td:nth-child(1) {

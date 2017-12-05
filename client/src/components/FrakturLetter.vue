@@ -19,7 +19,7 @@ export default {
 <style scoped>
 div {
   display: inline-block;
-  backgrournd: none;
+  background: none;
   text-align: center;
 }
 </style>

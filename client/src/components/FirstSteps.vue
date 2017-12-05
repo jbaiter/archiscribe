@@ -4,7 +4,7 @@
     <section v-else>
       <h1 class="title">Willkommen!</h1>
       <p>
-      Ziel diesser Anwendung soll es sein einen Bestand an Trainingsdaten aus
+      Ziel dieser Anwendung soll es sein einen Bestand an Trainingsdaten aus
       heterogenen Fraktur-Schriften zu erstellen, die <em>diplomatisch</em>
       transkribiert wurden. Diese Daten werden dann verwendet um ein möglichst
       robustes OCR-Modell für deutsche Frakturschriften zu trainieren.

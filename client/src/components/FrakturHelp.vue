@@ -26,7 +26,7 @@ export default {
   text-align: center;
 }
 
-div.fraktur-letter {
+.fraktur-letter {
   display:inline-block;
   margin: 0.5em 1.25em;
   background: none;
@@ -34,8 +34,8 @@ div.fraktur-letter {
   text-align: center;
 }
 
-div.fraktur-letter>img {
-  height:40px;
+.fraktur-letter>img {
+  height: 40px;
   color: #000;
   filter: drop-shadow(0px 1px 3px rgba(0, 0, 0, 0.5));
 }
