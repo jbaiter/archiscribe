@@ -3,6 +3,7 @@ require('./check-versions')()
 
 process.env.NODE_ENV = 'production'
 
+const fs = require('fs')
 const ora = require('ora')
 const rm = require('rimraf')
 const path = require('path')
@@ -19,6 +20,10 @@ rm(path.join(config.build.assetsRoot, config.build.assetsSubDirectory), err => {
   webpack(webpackConfig, function (err, stats) {
     spinner.stop()
     if (err) throw err
+
+    // Write stats to file so we can analyze the bundle
+    fs.writeFileSync('./stats.json', JSON.stringify(stats.toJson()))
+
     process.stdout.write(stats.toString({
       colors: true,
       modules: false,

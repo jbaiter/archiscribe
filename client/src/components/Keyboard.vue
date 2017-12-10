@@ -1,7 +1,7 @@
 <template>
   <div class="character-picker">
     <button class="keycap character" v-for="charDef in allChars"
-            :title="charDef.key ? 'alt+' + charDef.key : ''"
+            :title="charDef.key ? 'ctrl+i ' + charDef.key : ''"
             @click="onCharClick(charDef.char)">
       {{ charDef.char }}
     </button>
@@ -9,24 +9,24 @@
 </template>
 
 <script>
-import Mousetrap from 'mousetrap'
+import Mousetrap from '../vendor/mousetrap'
 
 import bus from '../eventBus'
 
 let SPECIAL_CHARACTERS = {
   'ſ': 's',
   'ꝛ': 'r',
-  'Æ': null,
-  'Œ': null,
-  'æ': 'a',
-  'œ': 'o',
-  'aͤ': 'ä',
-  'oͤ': 'ö',
-  'uͤ': 'ü',
-  'Aͤ': 'Ä',
-  'Oͤ': 'Ö',
-  'Uͤ': 'Ü',
-  '': null,
+  'Æ': 'Ä',
+  'Œ': 'Ö',
+  'æ': 'ä',
+  'œ': 'ö',
+  'aͤ': 'a e',
+  'oͤ': 'o e',
+  'uͤ': 'u e',
+  'Aͤ': 'A E',
+  'Oͤ': 'O E',
+  'Uͤ': 'U E',
+  '': 'u o',
   '⁰': '0',
   '¹': '1',
   '²': '2',
@@ -38,16 +38,16 @@ let SPECIAL_CHARACTERS = {
   '⁸': '8',
   '⁹': '9',
   '⸗': '-',
-  '—': null,
-  '‹': null,
-  '›': null,
-  '»': '>',
-  '«': '<',
-  '„': '"',
-  '”': "'",
-  '’': null,
-  '£': null,
-  '§': null,
+  '—': '_',
+  '‹': '<',
+  '›': '>',
+  '»': '2 >',
+  '«': '2 <',
+  '„': '. "',
+  '”': '"',
+  '’': "'",
+  '£': '$',
+  '§': 'S',
   '†': '+'
 }
 Object.assign(
@@ -63,8 +63,8 @@ let KEY_COMBINATIONS = {}
 Object.entries(SPECIAL_CHARACTERS)
   .map(([grapheme, key]) => {
     if (key != null) {
-      KEY_COMBINATIONS[grapheme] = 'alt+' + key
-      Mousetrap.bind('alt+' + key, (e) => {
+      KEY_COMBINATIONS[grapheme] = 'ctrl+i ' + key
+      Mousetrap.bind('ctrl+i ' + key, (e) => {
         e.preventDefault()
         bus.$emit('insert-grapheme', grapheme)
       })

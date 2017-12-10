@@ -15,7 +15,9 @@
   <p>
   Um die Eingabe von auf heutigen Tastaturen nicht mehr vorhandenen Zeichen zu
   vereinfachen steht bei der Transkriptiono eine virtuelle Tastatur zur
-  Verfügung die die gebräuchlichsten Zeichen zugänglich macht.
+  Verfügung die die gebräuchlichsten Zeichen zugänglich macht. Für viele von
+  ihnen sind auch Tastenkürzel konfiguriert, hierzu einfach über die Taste
+  mit der Maus hovern.
   </p>
 
   <h2 class="subtitle">Ligaturen: Immer aufspalten (außer <strong>ß</strong>)</h2>
