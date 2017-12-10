@@ -14,7 +14,7 @@
   </ul>
   <p>
   Um die Eingabe von auf heutigen Tastaturen nicht mehr vorhandenen Zeichen zu
-  vereinfachen steht bei der Transkriptiono eine virtuelle Tastatur zur
+  vereinfachen steht bei der Transkription eine virtuelle Tastatur zur
   Verfügung die die gebräuchlichsten Zeichen zugänglich macht. Für viele von
   ihnen sind auch Tastenkürzel konfiguriert, hierzu einfach über die Taste
   mit der Maus hovern.
@@ -129,7 +129,7 @@
         <strong>Ich habe die Richtlinien gelesen und werde versuchen sie einzuhalten</strong>
       </b-checkbox>
     </div>
-    <button v-if="hasRead" class="button is-success"><b-icon icon="check" /><span>Los geht's!</span></button>
+    <button :disabled="!hasRead" class="button is-success"><b-icon icon="check" /><span>Los geht's!</span></button>
   </form>
 </section>
 </template>
