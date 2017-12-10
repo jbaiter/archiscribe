@@ -60,13 +60,20 @@ export default {
       if (this.$refs.transcription.length === 0 || this.currentLineIdx < 0) {
         return
       }
-      let ref = this.$refs.transcription[this.currentLineIdx]
+      const ref = this.$refs.transcription[this.currentLineIdx]
+      const selStart = ref.selectionStart + 1
       this.$store.commit('insertGrapheme', {
         grapheme,
         start: ref.selectionStart,
         end: ref.selectionEnd
       })
-      ref.focus()
+      const isActive = document.activeElement === ref
+      this.$nextTick(() => {
+        if (!isActive) {
+          ref.focus()
+        }
+        ref.setSelectionRange(selStart, selStart)
+      })
     },
     ...mapMutations([
       'changeLine', 'changeScreen', 'discardLine', 'updateTranscription'])

@@ -106,11 +106,18 @@ export default {
       if (!vm.$refs.transcription) {
         return
       }
+      const selStart = vm.$refs.transcription.selectionStart + 1
       vm.$store.commit('insertGrapheme', {
         grapheme,
         start: vm.$refs.transcription.selectionStart,
         end: vm.$refs.transcription.selectionEnd })
-      vm.$refs.transcription.focus()
+      const isActive = document.activeElement === vm.$refs.transcription
+      this.$nextTick(() => {
+        if (!isActive) {
+          vm.$refs.transcription.focus()
+        }
+        vm.$refs.transcription.setSelectionRange(selStart, selStart)
+      })
     })
   },
   mounted () {
