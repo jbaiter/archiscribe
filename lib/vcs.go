@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 var commitPat = regexp.MustCompile(`^\[(.+) ([0-9a-f]+)\] (.+)\n`)
@@ -233,7 +234,10 @@ func (r *GitRepo) Log(fpaths ...string) ([]LogEntry, error) {
 		}
 		var entry LogEntry
 		if err := json.Unmarshal([]byte(entryJSON), &entry); err != nil {
-			log.Printf("%#v", entryJSON)
+			log.Error().
+				Err(err).
+				Str("logEntry", entryJSON).
+				Msg("Failed to parse Git log entry")
 			return nil, err
 		}
 		logEntries = append(logEntries, entry)

@@ -4,10 +4,11 @@ import (
 	"archiscribe/lib"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"sort"
+
+	"github.com/rs/zerolog/log"
 )
 
 func pickVolume(year int) string {
@@ -16,7 +17,8 @@ func pickVolume(year int) string {
 		candidate := entry.Identifier
 		isFrak, _ := lib.IsFraktur(candidate)
 		if !isFrak {
-			log.Printf("%s is not fraktur, continuing search\n", candidate)
+			log.Info().Str("identifier", candidate).
+				Msg("Document did not seem to have Fraktur letters")
 			continue
 		}
 		return candidate
@@ -48,7 +50,7 @@ func newLineProducer(resp http.ResponseWriter, taskSize int, year int) (*linePro
 func (p *lineProducer) produceLines() {
 	p.ident = pickVolume(p.year)
 	p.progChan, p.lineChan = lib.FetchLines(p.ident)
-	log.Printf("Getting lines for %s", p.ident)
+	log.Info().Str("identifier", p.ident).Msg("Fetching lines")
 	headers := p.resp.Header()
 	headers.Set("Content-Type", "text/event-stream")
 	headers.Set("Cache-Control", "no-cache")
@@ -110,9 +112,10 @@ func (p *lineProducer) streamLines() {
 				p.lineChan = nil
 				break
 			}
-			log.Printf(
-				"Got lines for %s, picking %d at random and caching them.",
-				p.ident, p.taskSize)
+			log.Info().
+				Str("identifier", p.ident).
+				Int("numLines", p.taskSize).
+				Msg("Picking lines and caching them")
 			p.handleLines(allLines)
 		case <-closer:
 			return

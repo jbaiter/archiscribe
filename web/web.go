@@ -3,7 +3,6 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"path"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/gobuffalo/packr"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/zerolog/log"
 
 	"archiscribe/lib"
 )
@@ -41,18 +41,24 @@ func SubmitDocument(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	err := json.NewDecoder(r.Body).Decode(&task)
 	task.ResultChan = make(chan lib.SubmitResult)
 	defer close(task.ResultChan)
-	if r.Method == "POST" {
-		log.Printf(
-			"Received %d transcriptions for %s",
-			len(task.Document.Lines), task.Document.Identifier)
-	} else {
-		log.Printf("Received update for %s", task.Document.Identifier)
-	}
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("documentId", task.Document.Identifier).
+			Msg("Could not decode submitted document")
 		writeAPIError(err, 500, w)
 	} else {
+		log.Info().
+			Bool("isUpdate", r.Method == "POST").
+			Int("numTranscriptions", len(task.Document.Lines)).
+			Str("documentId", task.Document.Identifier).
+			Msg("Received transcription")
 		stored, err := store.Save(task.Document, task.Author, task.Email, task.Comment)
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("documentId", task.Document.Identifier).
+				Msg("Error storing document")
 			writeAPIError(err, 500, w)
 			return
 		}
@@ -69,7 +75,7 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 	taskSize, _ := strconv.Atoi(req.URL.Query().Get("taskSize"))
 	lineProd, err := newLineProducer(resp, taskSize, year)
 	if err != nil {
-		log.Printf("%+v\n", err)
+		log.Error().Err(err).Msg("Failed to create line producer")
 		resp.WriteHeader(http.StatusInternalServerError)
 	} else {
 		lineProd.produceLines()
@@ -79,9 +85,10 @@ func ProduceLines(resp http.ResponseWriter, req *http.Request, ps httprouter.Par
 // ListDocuments returns a list of all documents
 func ListDocuments(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	documents := store.List()
+	log.Info().Msg("Loading all documents from store")
 	raw, err := json.Marshal(documents)
 	if err != nil {
-		log.Printf("%+v\n", err)
+		log.Error().Err(err).Msg("Failed to serialize documents to JSON")
 		resp.WriteHeader(http.StatusInternalServerError)
 	} else {
 		resp.Header().Add("Content-Type", "application/json")
@@ -92,7 +99,7 @@ func ListDocuments(resp http.ResponseWriter, req *http.Request, ps httprouter.Pa
 // GetDocument returns a single document
 func GetDocument(resp http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	doc := store.Details(ps.ByName("ident"))
-	log.Printf("Getting %s", ps.ByName("ident"))
+	log.Info().Str("identifier", ps.ByName("ident")).Msg("Loading document from store")
 	raw, err := json.Marshal(doc)
 	if err != nil {
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -153,6 +160,6 @@ func Serve(port int, repoPath string) {
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}
-	fmt.Printf("Serving on port %d\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
+	log.Info().Int("port", port).Msg("Serving application")
+	log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }

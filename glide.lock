@@ -1,5 +1,5 @@
-hash: 6824f78798d53c90bc0af9506334e6c6e124208b33233f3ae393e0c1ef52577f
-updated: 2017-10-25T23:25:59.84142193+02:00
+hash: 54040203c39c7fff73380a9b2001abc94e7f095717474fc962fa734986ff22eb
+updated: 2017-12-13T22:34:26.026049514+01:00
 imports:
 - name: github.com/bitly/go-simplejson
   version: aabad6e819789e569bd6aabf444c935aa9ba1e44
@@ -15,13 +15,18 @@ imports:
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/olekukonko/tablewriter
   version: a7a4c189eb47ed33ce7b35f2880070a0c82a67d4
+- name: github.com/rs/zerolog
+  version: 3ac71fc58dbd43122668a912b755b0979ba9ce1f
+  subpackages:
+  - internal/json
+  - log
 - name: golang.org/x/sys
   version: e24f485414aeafb646f6fca458b0bf869c0880a1
   repo: https://go.googlesource.com/sys
   subpackages:
   - unix
 - name: gopkg.in/cheggaaa/pb.v2
-  version: fec330ed6ef74d0a026da2c639821ee0d9f97687
+  version: c112833d014c77e8bde723fd0158e3156951639f
   subpackages:
   - termutil
 - name: gopkg.in/fatih/color.v1

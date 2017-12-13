@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	simplejson "github.com/bitly/go-simplejson"
+	"github.com/rs/zerolog/log"
 	pb "gopkg.in/cheggaaa/pb.v2"
 )
 
@@ -173,7 +173,9 @@ func GetStartPageNumber(ident string) int {
 }
 
 func fetchLinesWorker(ident string, minLineWidth int, progressChan chan ProgressMessage, linesChan chan []OCRLine) {
-	log.Printf("Getting ABBY OCR for %s\n", ident)
+	log.Info().
+		Str("archiveId", ident).
+		Msg("Getting ABBY OCR")
 	boxURL := fmt.Sprintf("https://archive.org/download/%s/%s_abbyy.gz",
 		ident, ident)
 	resp, err := http.Get(boxURL)
@@ -187,7 +189,10 @@ func fetchLinesWorker(ident string, minLineWidth int, progressChan chan Progress
 		return
 	}
 	numBytesTotal := resp.ContentLength
-	log.Printf("Parsing lines from %s ABBYY OCR, has %d bytes\n", ident, numBytesTotal)
+	log.Info().
+		Str("archiveId", ident).
+		Int64("numBytes", numBytesTotal).
+		Msg("Parsing lines from ABBYY OCR")
 	progReader := NewProgressReader(resp.Body)
 	gzReader, _ := gzip.NewReader(progReader)
 	defer resp.Body.Close()

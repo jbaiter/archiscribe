@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +14,7 @@ import (
 
 	simplejson "github.com/bitly/go-simplejson"
 	"github.com/olekukonko/tablewriter"
+	"github.com/rs/zerolog/log"
 )
 
 var pagePat = regexp.MustCompile(`<page width="(\d+)" height="(\d+)".+?>`)
@@ -106,12 +106,18 @@ func createReadme(repoPath string) string {
 	for _, metaPath := range metaFiles {
 		fp, err := os.Open(metaPath)
 		if err != nil {
-			log.Printf("Could not read meta file %s: %+v", metaPath, err)
+			log.Error().
+				Err(err).
+				Str("metaPath", metaPath).
+				Msg("Could not read meta file")
 			continue
 		}
 		meta, err := simplejson.NewFromReader(fp)
 		if err != nil {
-			log.Printf("Could not parse meta file %s: %+v", metaPath, err)
+			log.Error().
+				Err(err).
+				Str("metaPath", metaPath).
+				Msg("Could not parse meta file")
 			continue
 		}
 		numLines := len(meta.Get("lines").MustMap())
@@ -198,9 +204,14 @@ func InitCache() {
 	if os.IsNotExist(err) {
 		os.MkdirAll(cacheDir, 0755)
 	} else if !dirStat.IsDir() {
-		log.Panicf("Cache directory '%s' is not a directory!", cacheDir)
+		log.Panic().
+			Str("cacheDir", cacheDir).
+			Msg("Cache directory is not a directory!")
 	} else if err != nil {
-		log.Panicf("Error setting up cache directory: %v", err)
+		log.Panic().
+			Err(err).
+			Str("cacheDir", cacheDir).
+			Msg("Could not set up cache directory")
 	}
 	LineCache = NewLineImageCache(cacheDir)
 	idCacheFile := filepath.Join(cacheDir, "identifiers.json")

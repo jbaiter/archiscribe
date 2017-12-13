@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Identifier Cache
@@ -119,9 +121,17 @@ func (c *LineImageCache) CacheLine(url string, id string) (string, error) {
 
 // CacheLines caches all passed lines
 func (c *LineImageCache) CacheLines(lines []OCRLine, ident string) {
+	log.Info().
+		Str("identifier", ident).
+		Int("numLines", len(lines)).
+		Msg("Caching lines")
 	for _, line := range lines {
 		c.CacheLine(line.ImageURL, MakeLineIdentifier(ident, line))
 	}
+	log.Info().
+		Str("identifier", ident).
+		Int("numLines", len(lines)).
+		Msg("Cached lines")
 }
 
 // GetLinePath returns the file path for a given line image

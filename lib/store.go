@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/rs/zerolog/log"
 )
 
 // DocumentStore offers an interface to the transcriptions
@@ -86,11 +87,11 @@ func (s *DocumentStore) Details(ident string) *Document {
 		tp, _ := filepath.Rel(s.basePath, tf)
 		transPaths = append(transPaths, tp)
 	}
-	log, err := s.repo.Log(transPaths...)
+	transLog, err := s.repo.Log(transPaths...)
 	if err != nil {
 		panic(err)
 	}
-	doc.History = log
+	doc.History = transLog
 	return &doc
 }
 
@@ -144,9 +145,12 @@ func (s *DocumentStore) removeDeletedLines(doc Document) {
 
 // Save a document
 func (s *DocumentStore) Save(doc Document, author string, email string, comment string) (*Document, error) {
+	logger := log.With().Str("identifier", doc.Identifier).Logger()
+	logger.Info().Msg("Cleaning up repository")
 	if err := s.repo.CleanUp(); err != nil {
 		return nil, err
 	}
+	logger.Info().Msg("Pulling from origin")
 	if err := s.repo.Pull("origin", "master", true); err != nil {
 		return nil, err
 	}
@@ -178,6 +182,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 		// We don't store the transcriptions in the JSON
 		doc.Lines[idx].Transcription = ""
 	}
+	logger.Info().Int("numRemoved", len(toRemove)).Msg("Removed empty lines")
 	filtered := make([]OCRLine, 0, len(doc.Lines)-len(toRemove))
 	for _, line := range doc.Lines {
 		if !toRemove[line.Identifier] {
@@ -194,6 +199,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 	}
 
 	// Write metadata
+	logger.Info().Msg("Writing metadata")
 	metaOut, _ := os.Create(metaPath)
 	enc := json.NewEncoder(metaOut)
 	enc.SetIndent("", "  ")
@@ -203,6 +209,7 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 		return nil, err
 	}
 
+	logger.Info().Msg("Creating README")
 	readme := s.createReadme()
 	readmePath := filepath.Join(s.basePath, "README.md")
 	readmeOut, _ := os.Create(readmePath)
@@ -253,7 +260,9 @@ func (s *DocumentStore) Save(doc Document, author string, email string, comment 
 	if _, err := s.repo.Commit(commitMessage, author, email); err != nil {
 		return nil, err
 	}
+	logger.Info().Msg("Committed")
 	s.repo.Push("origin", "master")
+	logger.Info().Msg("Pushed")
 	return s.Details(doc.Identifier), nil
 }
 
@@ -266,6 +275,9 @@ func (s *DocumentStore) writeLineData(doc Document, line OCRLine) error {
 		// Obtain image file
 		cachedPath := LineCache.GetLinePath(line.Identifier)
 		if cachedPath == "" {
+			log.Warn().
+				Str("lineId", line.Identifier).
+				Msg("Line image was not cached, fetching it.")
 			path, err := LineCache.CacheLine(line.ImageURL, line.Identifier)
 			if err != nil {
 				return err
@@ -307,7 +319,6 @@ func (s *DocumentStore) writeLineData(doc Document, line OCRLine) error {
 }
 
 func (s *DocumentStore) createReadme() string {
-	// FIXME: Counts are still broken
 	documents := s.List()
 	sort.Slice(documents, func(i, j int) bool {
 		return documents[i].Year < documents[j].Year
