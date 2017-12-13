@@ -82,20 +82,15 @@ func (p *lineProducer) handleLines(lines []lib.OCRLine) {
 		}
 		lineIdxes = append(lineIdxes, pickIdx)
 		lineIdxesMap[pickIdx] = true
-		lib.LineCache.CacheLine(
-			lines[pickIdx].ImageURL,
-			lib.MakeLineIdentifier(p.ident, lines[pickIdx]))
-		progMsg := lib.ProgressMessage{
-			Step:     "cache",
-			Progress: 0.50 + (0.50 * (float64(len(lineIdxes)) / float64(p.taskSize))),
-		}
-		p.writeMessage("progress", progMsg)
 	}
 	sort.Ints(lineIdxes)
 	randomLines := make([]lib.OCRLine, 0, len(lineIdxes))
 	for _, lineIdx := range lineIdxes {
 		randomLines = append(randomLines, lines[lineIdx])
 	}
+	// Run in the background, the user does not have to wait for our
+	// caching
+	go lib.LineCache.CacheLines(randomLines, p.ident)
 	p.writeMessage("lines", randomLines)
 }
 
@@ -109,8 +104,6 @@ func (p *lineProducer) streamLines() {
 				p.progChan = nil
 				break
 			}
-			// Downloading is only 50% of the overall progress
-			progMsg.Progress = 0.5 * progMsg.Progress
 			p.writeMessage("progress", progMsg)
 		case allLines, ok := <-p.lineChan:
 			if !ok {

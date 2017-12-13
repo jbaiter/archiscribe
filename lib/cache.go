@@ -117,6 +117,13 @@ func (c *LineImageCache) CacheLine(url string, id string) (string, error) {
 	return imgPath, nil
 }
 
+// CacheLines caches all passed lines
+func (c *LineImageCache) CacheLines(lines []OCRLine, ident string) {
+	for _, line := range lines {
+		c.CacheLine(line.ImageURL, MakeLineIdentifier(ident, line))
+	}
+}
+
 // GetLinePath returns the file path for a given line image
 func (c *LineImageCache) GetLinePath(id string) string {
 	imgPath := filepath.Join(c.path, id+".png")
