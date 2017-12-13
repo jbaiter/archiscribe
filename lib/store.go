@@ -273,7 +273,8 @@ func (s *DocumentStore) writeLineData(doc Document, line OCRLine) error {
 	imgPath := basePath + ".png"
 	if _, err := os.Stat(imgPath); os.IsNotExist(err) {
 		// Obtain image file
-		cachedPath := LineCache.GetLinePath(line.Identifier)
+		cacheID := MakeLineIdentifier(doc.Identifier, line)
+		cachedPath := LineCache.GetLinePath(cacheID)
 		if cachedPath == "" {
 			log.Warn().
 				Str("lineId", line.Identifier).
