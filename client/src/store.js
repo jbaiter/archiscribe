@@ -110,7 +110,7 @@ let store = new Vuex.Store({
     },
     setLines (state, lines) {
       state.lines = lines
-      preloadLineImages(state.lines.map(l => l.line))
+      preloadLineImages(state.lines.map(l => l.line.replace(/\.png$/, '.jpg')))
     },
     setYear (state, year) {
       state.year = year
