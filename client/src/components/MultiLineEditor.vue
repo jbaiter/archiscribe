@@ -61,7 +61,7 @@ export default {
         return
       }
       const ref = this.$refs.transcription[this.currentLineIdx]
-      const selStart = ref.selectionStart + 1
+      const selStart = ref.selectionStart + grapheme.length
       this.$store.commit('insertGrapheme', {
         grapheme,
         start: ref.selectionStart,

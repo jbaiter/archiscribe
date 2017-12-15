@@ -98,27 +98,27 @@ export default {
     previousLine () {
       this.$store.commit('previousLine')
       this.resetContext()
+    },
+    onInsertGrapheme (grapheme) {
+      if (!this.$refs.transcription) {
+        return
+      }
+      const selStart = this.$refs.transcription.selectionStart + grapheme.length
+      this.$store.commit('insertGrapheme', {
+        grapheme,
+        start: this.$refs.transcription.selectionStart,
+        end: this.$refs.transcription.selectionEnd })
+      const isActive = document.activeElement === this.$refs.transcription
+      this.$nextTick(() => {
+        if (!isActive) {
+          this.$refs.transcription.focus()
+        }
+        this.$refs.transcription.setSelectionRange(selStart, selStart)
+      })
     }
   },
   created () {
-    const vm = this
-    bus.$on('insert-grapheme', (grapheme) => {
-      if (!vm.$refs.transcription) {
-        return
-      }
-      const selStart = vm.$refs.transcription.selectionStart + 1
-      vm.$store.commit('insertGrapheme', {
-        grapheme,
-        start: vm.$refs.transcription.selectionStart,
-        end: vm.$refs.transcription.selectionEnd })
-      const isActive = document.activeElement === vm.$refs.transcription
-      this.$nextTick(() => {
-        if (!isActive) {
-          vm.$refs.transcription.focus()
-        }
-        vm.$refs.transcription.setSelectionRange(selStart, selStart)
-      })
-    })
+    bus.$on('insert-grapheme', this.onInsertGrapheme)
   },
   mounted () {
     this.$refs.transcription.focus()
