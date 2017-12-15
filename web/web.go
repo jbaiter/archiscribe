@@ -161,5 +161,7 @@ func Serve(port int, repoPath string) {
 		}
 	}
 	log.Info().Int("port", port).Msg("Serving application")
-	log.Fatal().Err(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
+	if err = http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
+		log.Fatal().Err(err).Msg("Failed to serve application")
+	}
 }
